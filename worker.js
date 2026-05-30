@@ -1,19 +1,14 @@
 // ============================================================
-// NyXia — Cloudflare Worker (Backend API)
+// NyXia — Cloudflare Worker UNIFIÉ
 // ============================================================
-// Ce Worker est le CERVEAU de NyXia.
-// Il agit comme proxy : la clé API reste cachée côté serveur.
-// Le dashboard.html ne voit JAMAIS la clé OpenRouter.
+// CE WORKER GÈRE TOUT : API + FICHIERS STATIQUES
 //
-// ARCHITECTURE :
-//   dashboard.html → fetch('/api/login') → Ce Worker → OpenRouter API
+// Déploiement :
+//   OPTION 1 : wrangler pages deploy . --project-name=nyxia
+//   OPTION 2 : wrangler deploy
 //
-// DÉPLOIEMENT :
-//   1. wrangler kv:namespace create "NYXIA_KV"
-//   2. Collez l'ID dans wrangler.toml
-//   3. wrangler secret put OPENROUTER_API_KEY  ← votre clé secrète
-//   4. wrangler secret put ADMIN_PASSWORD       ← mot de passe admin
-//   5. wrangler deploy
+// Le fichier _worker.js est aussi présent comme backup pour
+// Cloudflare Pages Advanced Mode auto-detect.
 // ============================================================
 
 // ─── Qui est VRAIMENT NyXia — Le Miroir Bienveillant ───
@@ -174,19 +169,17 @@ RÈGLES :
 - Si on te demande qui t'a créée, dis "J'ai été créée par Diane Boyer ✦"`
 };
 
-// ─── Modèles OpenRouter ───
 const OPENROUTER_MODEL = 'z-ai/glm-5v-turbo';
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // CORS
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token',
     };
 
     if (request.method === 'OPTIONS') {
@@ -194,72 +187,33 @@ export default {
     }
 
     try {
-
-      // ═══ CLIENT AUTH ═══
-      // Route /api/login (appelée par login.html)
-      if (path === '/api/login' && request.method === 'POST') {
-        return handleClientLogin(request, env, corsHeaders);
-      }
-      // Alias /api/auth/login (compatibilité)
-      if (path === '/api/auth/login' && request.method === 'POST') {
-        return handleClientLogin(request, env, corsHeaders);
+      // ═══════════════════════════════════════
+      //  API ROUTES
+      // ═══════════════════════════════════════
+      if (path.startsWith('/api/')) {
+        return handleAPI(request, env, corsHeaders);
       }
 
-      if (path === '/api/check-auth' && request.method === 'POST') {
-        return handleCheckAuth(request, env, corsHeaders);
+      // ═══════════════════════════════════════
+      //  STATIC FILES
+      // ═══════════════════════════════════════
+      // Option A: Cloudflare Pages — env.ASSETS is available
+      if (env.ASSETS) {
+        try {
+          return await env.ASSETS.fetch(request);
+        } catch (e) {
+          // Fallback to index.html for SPA-like behavior
+          const indexUrl = new URL('/index.html', request.url);
+          return await env.ASSETS.fetch(new Request(indexUrl, request));
+        }
       }
 
-      if (path === '/api/logout' && request.method === 'POST') {
-        return handleLogout(request, env, corsHeaders);
-      }
-
-      // ═══ CHAT — LE CERVEAU DE NYXIA ═══
-      if (path === '/api/chat' && request.method === 'POST') {
-        return handleChat(request, env, corsHeaders);
-      }
-
-      // ═══ ADMIN AUTH ═══
-      if (path === '/api/admin/login' && request.method === 'POST') {
-        return handleAdminLogin(request, env, corsHeaders);
-      }
-
-      // ═══ ADMIN ROUTES (PROTÉGÉES) ═══
-      // Chaque route admin vérifie le token avant d'exécuter
-      if (path === '/api/admin/clients' && request.method === 'GET') {
-        return withAdminAuth(request, env, corsHeaders, handleListClients);
-      }
-      if (path === '/api/admin/clients' && request.method === 'POST') {
-        return withAdminAuth(request, env, corsHeaders, handleCreateClient);
-      }
-      if (path === '/api/admin/clients' && request.method === 'PUT') {
-        return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
-      }
-      if (path === '/api/admin/clients' && request.method === 'DELETE') {
-        return withAdminAuth(request, env, corsHeaders, handleDeleteClientById);
-      }
-      if (path === '/api/admin/clients/update' && request.method === 'POST') {
-        return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
-      }
-      if (path === '/api/admin/clients/delete' && request.method === 'POST') {
-        return withAdminAuth(request, env, corsHeaders, handleDeleteClientByEmail);
-      }
-      if (path.startsWith('/api/admin/clients/') && request.method === 'DELETE') {
-        const id = path.split('/').pop();
-        return withAdminAuth(request, env, corsHeaders, (req, env2, h) => handleDeleteClient(id, env2, h));
-      }
-
-      // ═══ ADMIN STATS (PROTÉGÉ) ═══
-      if (path === '/api/admin/stats' && request.method === 'GET') {
-        return withAdminAuth(request, env, corsHeaders, handleAdminStats);
-      }
-
-      return new Response(JSON.stringify({ error: 'Route non trouvée' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      // Option B: Standalone Worker without ASSETS
+      // Serve files from KV (if uploaded via /api/admin/init-static)
+      return await serveFromKV(path, env, request);
 
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), {
+      return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -268,12 +222,129 @@ export default {
 };
 
 // ============================================================
-//  ADMIN AUTH MIDDLEWARE — Vérifie le token admin
+//  STATIC FILE SERVING (from KV — fallback when no ASSETS)
+// ============================================================
+const CONTENT_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css':  'text/css; charset=utf-8',
+  '.js':   'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif':  'image/gif',
+  '.svg':  'image/svg+xml',
+  '.ico':  'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
+async function serveFromKV(path, env, request) {
+  const filePath = path === '/' ? '/index.html' : path;
+  const key = 'static:' + filePath;
+  const data = await env.NYXIA_KV.get(key);
+
+  if (data) {
+    const ext = filePath.split('.').pop().toLowerCase();
+    const contentType = CONTENT_TYPES['.' + ext] || 'application/octet-stream';
+    return new Response(data, {
+      headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' }
+    });
+  }
+
+  // Check if KV has any static files
+  const hasInit = await env.NYXIA_KV.get('static_init_done');
+  if (!hasInit) {
+    return new Response(`<!DOCTYPE html><html><head><title>NyXia — Initialisation requise</title>
+<style>body{font-family:sans-serif;background:#0F1C3F;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.box{background:#1A2554;border:1px solid rgba(123,92,255,0.3);border-radius:20px;padding:40px;max-width:500px;text-align:center}
+h2{color:#a78bfa;margin-bottom:16px}p{color:#D6D9F0;line-height:1.7}code{background:rgba(0,0,0,0.3);padding:4px 8px;border-radius:6px;font-size:14px}
+.btn{display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#7B5CFF,#5A6CFF);color:#fff;border-radius:12px;text-decoration:none;margin-top:16px;font-weight:700}</style></head>
+<body><div class="box">
+<h2>💜 NyXia — Configuration requise</h2>
+<p>Les fichiers statiques n'ont pas été initialisés dans le KV.<br><br>
+<strong>Si tu utilises Cloudflare Pages :</strong><br>
+Déploie avec <code>wrangler pages deploy . --project-name=nyxia</code><br><br>
+<strong>Si tu utilises Cloudflare Workers :</strong><br>
+Les fichiers HTML doivent être uploadés en KV.<br>Contacte Diane Boyer pour l'initialisation.
+</p></div></body></html>`, { status: 503, headers: { 'Content-Type': 'text/html' } });
+  }
+
+  return new Response('Fichier non trouvé', { status: 404 });
+}
+
+// ============================================================
+//  ROUTEUR API
+// ============================================================
+async function handleAPI(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  try {
+    // ═══ CLIENT AUTH ═══
+    if (path === '/api/login' && request.method === 'POST') {
+      return await handleClientLogin(request, env, corsHeaders);
+    }
+    if (path === '/api/auth/login' && request.method === 'POST') {
+      return await handleClientLogin(request, env, corsHeaders);
+    }
+    if (path === '/api/check-auth' && request.method === 'POST') {
+      return await handleCheckAuth(request, env, corsHeaders);
+    }
+    if (path === '/api/logout' && request.method === 'POST') {
+      return await handleLogout(request, env, corsHeaders);
+    }
+
+    // ═══ CHAT ═══
+    if (path === '/api/chat' && request.method === 'POST') {
+      return await handleChat(request, env, corsHeaders);
+    }
+
+    // ═══ ADMIN AUTH ═══
+    if (path === '/api/admin/login' && request.method === 'POST') {
+      return await handleAdminLogin(request, env, corsHeaders);
+    }
+
+    // ═══ ADMIN ROUTES (PROTÉGÉES) ═══
+    if (path === '/api/admin/clients' && request.method === 'GET') {
+      return await withAdminAuth(request, env, corsHeaders, handleListClients);
+    }
+    if (path === '/api/admin/clients' && request.method === 'POST') {
+      return await withAdminAuth(request, env, corsHeaders, handleCreateClient);
+    }
+    if (path === '/api/admin/clients' && request.method === 'PUT') {
+      return await withAdminAuth(request, env, corsHeaders, handleUpdateClient);
+    }
+    if (path === '/api/admin/clients' && request.method === 'DELETE') {
+      return await withAdminAuth(request, env, corsHeaders, handleDeleteClientById);
+    }
+    if (path === '/api/admin/clients/update' && request.method === 'POST') {
+      return await withAdminAuth(request, env, corsHeaders, handleUpdateClient);
+    }
+    if (path === '/api/admin/clients/delete' && request.method === 'POST') {
+      return await withAdminAuth(request, env, corsHeaders, handleDeleteClientByEmail);
+    }
+    if (path.startsWith('/api/admin/clients/') && request.method === 'DELETE') {
+      const id = path.split('/').pop();
+      return await withAdminAuth(request, env, corsHeaders, (req, env2, h) => handleDeleteClient(id, env2, h));
+    }
+    if (path === '/api/admin/stats' && request.method === 'GET') {
+      return await withAdminAuth(request, env, corsHeaders, handleAdminStats);
+    }
+
+    return jsonResponse({ error: 'Route non trouvée' }, { ...corsHeaders, status: 404 });
+
+  } catch (err) {
+    return jsonResponse({ error: err.message }, { ...corsHeaders, status: 500 });
+  }
+}
+
+// ============================================================
+//  ADMIN AUTH
 // ============================================================
 async function verifyAdminToken(request, env) {
   const authHeader = request.headers.get('X-Admin-Token');
   if (!authHeader) return false;
-
   const sessionData = await env.NYXIA_KV.get('admin_session_' + authHeader);
   return sessionData === 'true';
 }
@@ -281,16 +352,13 @@ async function verifyAdminToken(request, env) {
 async function withAdminAuth(request, env, corsHeaders, handler) {
   const isValid = await verifyAdminToken(request, env);
   if (!isValid) {
-    return new Response(JSON.stringify({ error: 'Non autorisé — session admin requise' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    return jsonResponse({ error: 'Non autorisé — session admin requise' }, { ...corsHeaders, status: 401 });
   }
   return handler(request, env, corsHeaders);
 }
 
 // ============================================================
-//  CHAT — OPENROUTER PROXY
+//  CHAT
 // ============================================================
 async function handleChat(request, env, headers) {
   const body = await request.json();
@@ -305,27 +373,16 @@ async function handleChat(request, env, headers) {
 
   const agentKey = agent || 'nyxia';
   const systemPrompt = SYSTEM_PROMPTS[agentKey] || SYSTEM_PROMPTS.nyxia;
-
-  const messages = [
-    { role: 'system', content: systemPrompt },
-  ];
+  const messages = [{ role: 'system', content: systemPrompt }];
 
   if (userName) {
-    messages.push({
-      role: 'system',
-      content: `Le nom de la praticienne est **${userName}**. Personnalise tes réponses en l'appelant par son prénom.`
-    });
+    messages.push({ role: 'system', content: 'Le nom de la praticienne est **' + userName + '**. Personnalise tes réponses en l\'appelant par son prénom.' });
   }
-
   if (history && history.length > 0) {
     for (const msg of history) {
-      messages.push({
-        role: msg.role === 'assistant' ? 'assistant' : 'user',
-        content: msg.content,
-      });
+      messages.push({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.content });
     }
   }
-
   messages.push({ role: 'user', content: message });
 
   try {
@@ -333,41 +390,24 @@ async function handleChat(request, env, headers) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': 'Bearer ' + apiKey,
         'HTTP-Referer': 'https://lemiroirnyxia.com',
         'X-Title': 'NyXia IA — Le Miroir des Aidantes',
       },
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        messages: messages,
-        max_tokens: 1024,
-        temperature: 0.75,
-      }),
+      body: JSON.stringify({ model: OPENROUTER_MODEL, messages, max_tokens: 1024, temperature: 0.75 }),
     });
-
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenRouter error:', response.status, errorData);
-      return jsonResponse({
-        content: '⚠️ Erreur de connexion au service IA. Réessaie dans un instant 💜\n\n(Code: ' + response.status + ')'
-      }, headers);
+      return jsonResponse({ content: '⚠️ Erreur de connexion au service IA. Réessaie dans un instant 💜 (Code: ' + response.status + ')' }, headers);
     }
-
     const data = await response.json();
-    const reply = data.choices[0].message.content;
-
-    return jsonResponse({ content: reply }, headers);
-
+    return jsonResponse({ content: data.choices[0].message.content }, headers);
   } catch (err) {
-    console.error('Chat error:', err);
-    return jsonResponse({
-      content: 'Petite interruption technique… réessaie dans un instant 💜'
-    }, headers);
+    return jsonResponse({ content: 'Petite interruption technique… réessaie dans un instant 💜' }, headers);
   }
 }
 
 // ============================================================
-//  AUTH CLIENT
+//  CLIENT AUTH
 // ============================================================
 async function handleClientLogin(request, env, headers) {
   const { email, password } = await request.json();
@@ -380,60 +420,35 @@ async function handleClientLogin(request, env, headers) {
   if (!client.active) {
     return jsonResponse({ error: 'Compte désactivé. Contactez le support.' }, { ...headers, status: 403 });
   }
-
-  // Vérification du mot de passe (en clair, tel que créé par l'admin)
   if (password !== client.password) {
     return jsonResponse({ error: 'Email ou mot de passe incorrect' }, { ...headers, status: 401 });
   }
 
-  // Créer un token de session
   const token = crypto.randomUUID();
   await env.NYXIA_KV.put('session_' + token, JSON.stringify({
-    id: client.id,
-    email: client.email,
-    firstName: client.firstName,
-    lastName: client.lastName,
-    name: client.name,
-    role: client.role || 'client',
-    products: client.products || [],
-    createdAt: Date.now()
-  }), { expirationTtl: 86400 }); // 24h
+    id: client.id, email: client.email, firstName: client.firstName,
+    lastName: client.lastName, name: client.name, role: client.role || 'client',
+    products: client.products || [], createdAt: Date.now()
+  }), { expirationTtl: 86400 });
 
   return jsonResponse({
-    success: true,
-    token: token,
-    firstname: client.firstName,
-    name: client.name,
-    session: {
-      id: client.id,
-      firstName: client.firstName,
-      lastName: client.lastName,
-      email: client.email,
-      role: client.role,
-    },
+    success: true, token, firstname: client.firstName, name: client.name,
+    session: { id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, role: client.role },
   }, headers);
 }
 
 async function handleCheckAuth(request, env, headers) {
   const { token } = await request.json();
-  if (!token) {
-    return jsonResponse({ valid: false }, headers);
-  }
-
+  if (!token) return jsonResponse({ valid: false }, headers);
   const sessionData = await env.NYXIA_KV.get('session_' + token);
-  if (!sessionData) {
-    return jsonResponse({ valid: false }, headers);
-  }
-
+  if (!sessionData) return jsonResponse({ valid: false }, headers);
   const session = JSON.parse(sessionData);
   return jsonResponse({ valid: true, email: session.email, name: session.name || session.firstName, role: session.role }, headers);
 }
 
 async function handleLogout(request, env, headers) {
   const { token } = await request.json();
-  if (token) {
-    await env.NYXIA_KV.delete('session_' + token);
-  }
+  if (token) await env.NYXIA_KV.delete('session_' + token);
   return jsonResponse({ success: true }, headers);
 }
 
@@ -443,116 +458,69 @@ async function handleLogout(request, env, headers) {
 async function handleAdminLogin(request, env, headers) {
   const { password } = await request.json();
   const adminPass = await env.NYXIA_KV.get('admin_password') || 'NyXiaAdmin2026!';
-
   if (password === adminPass) {
     const token = crypto.randomUUID();
-    await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 }); // 4h
-    return jsonResponse({ success: true, token: token }, headers);
+    await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 });
+    return jsonResponse({ success: true, token }, headers);
   }
   return jsonResponse({ error: 'Mot de passe incorrect' }, { ...headers, status: 401 });
 }
 
 // ============================================================
-//  CLIENT MANAGEMENT (ADMIN — PROTÉGÉ)
+//  CLIENT MANAGEMENT
 // ============================================================
 async function handleCreateClient(request, env, headers) {
   const { firstName, lastName, name, email, password, role, products } = await request.json();
-
-  if (!name && (!firstName || !lastName)) {
-    return jsonResponse({ error: 'Nom requis' }, { ...headers, status: 400 });
-  }
-  if (!email || !password) {
-    return jsonResponse({ error: 'Email et mot de passe requis' }, { ...headers, status: 400 });
-  }
+  if (!name && (!firstName || !lastName)) return jsonResponse({ error: 'Nom requis' }, { ...headers, status: 400 });
+  if (!email || !password) return jsonResponse({ error: 'Email et mot de passe requis' }, { ...headers, status: 400 });
 
   const clients = await getClients(env);
-  if (clients.find(c => c.email === email.toLowerCase().trim())) {
-    return jsonResponse({ error: 'Email déjà utilisé' }, { ...headers, status: 409 });
-  }
+  if (clients.find(c => c.email === email.toLowerCase().trim())) return jsonResponse({ error: 'Email déjà utilisé' }, { ...headers, status: 409 });
 
   const fullName = name || (firstName + ' ' + lastName);
-
-  // MOT DE PASSE EN CLAIR — l'admin le crée pour le donner au client
-  // Pas de hash : le client doit taper exactement ce que l'admin lui a donné
   const client = {
-    id: crypto.randomUUID(),
-    firstName: firstName || fullName.split(' ')[0],
+    id: crypto.randomUUID(), firstName: firstName || fullName.split(' ')[0],
     lastName: lastName || fullName.split(' ').slice(1).join(' '),
-    name: fullName,
-    email: email.toLowerCase().trim(),
-    password: password, // EN CLAIR pour que l'admin puisse le partager
-    role: role || 'client',
-    products: Array.isArray(products) ? products : [],
-    active: true,
-    createdAt: new Date().toISOString(),
+    name: fullName, email: email.toLowerCase().trim(), password,
+    role: role || 'client', products: Array.isArray(products) ? products : [],
+    active: true, createdAt: new Date().toISOString(),
   };
-
   clients.push(client);
   await saveClients(env, clients);
-
-  return jsonResponse({ success: true, client: client }, headers);
+  return jsonResponse({ success: true, client }, headers);
 }
 
 async function handleListClients(request, env, headers) {
   const clients = await getClients(env);
-  // On RETOURNE les mots de passe car l'admin en a besoin pour les partager aux clients
-  return jsonResponse({ clients: clients }, headers);
+  return jsonResponse({ clients }, headers);
 }
 
 async function handleUpdateClient(request, env, headers) {
   const body = await request.json();
   const { email, firstName, lastName, name, newEmail, password, products, status } = body;
-
-  if (!email) {
-    return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
-  }
-
+  if (!email) return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
   const clients = await getClients(env);
   const idx = clients.findIndex(c => c.email === email.toLowerCase().trim());
-  if (idx === -1) {
-    return jsonResponse({ error: 'Client non trouvé' }, { ...headers, status: 404 });
-  }
-
-  // Mise à jour des champs
+  if (idx === -1) return jsonResponse({ error: 'Client non trouvé' }, { ...headers, status: 404 });
   if (firstName) clients[idx].firstName = firstName;
   if (lastName) clients[idx].lastName = lastName;
   if (name) clients[idx].name = name;
   else if (firstName || lastName) clients[idx].name = (clients[idx].firstName || '') + ' ' + (clients[idx].lastName || '');
-
-  // Changement d'email
   if (newEmail && newEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
-    const duplicate = clients.findIndex(c => c.email === newEmail.toLowerCase().trim());
-    if (duplicate !== -1) {
+    if (clients.findIndex(c => c.email === newEmail.toLowerCase().trim()) !== -1)
       return jsonResponse({ error: 'Cet email est déjà utilisé' }, { ...headers, status: 409 });
-    }
     clients[idx].email = newEmail.toLowerCase().trim();
   }
-
-  // Changement de mot de passe
-  if (password && password.length >= 6) {
-    clients[idx].password = password;
-  }
-
-  // Produits
-  if (Array.isArray(products)) {
-    clients[idx].products = products;
-  }
-
-  // Statut
-  if (status === 'active' || status === 'suspended') {
-    clients[idx].active = (status === 'active');
-  }
-
+  if (password && password.length >= 6) clients[idx].password = password;
+  if (Array.isArray(products)) clients[idx].products = products;
+  if (status === 'active' || status === 'suspended') clients[idx].active = (status === 'active');
   await saveClients(env, clients);
   return jsonResponse({ success: true, client: clients[idx] }, headers);
 }
 
 async function handleDeleteClientByEmail(request, env, headers) {
   const { email } = await request.json();
-  if (!email) {
-    return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
-  }
-
+  if (!email) return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
   let clients = await getClients(env);
   clients = clients.filter(c => c.email !== email.toLowerCase().trim());
   await saveClients(env, clients);
@@ -568,28 +536,18 @@ async function handleDeleteClient(id, env, headers) {
 
 async function handleDeleteClientById(request, env, headers) {
   const url = new URL(request.url);
-  const id = url.pathname.split('/').pop();
-  return handleDeleteClient(id, env, headers);
+  return handleDeleteClient(url.pathname.split('/').pop(), env, headers);
 }
 
-// ============================================================
-//  ADMIN STATS
-// ============================================================
 async function handleAdminStats(request, env, headers) {
   const clients = await getClients(env);
   const now = new Date().toISOString().split('T')[0];
-
   const clientAccounts = clients.filter(c => (c.role || 'client') !== 'superadmin');
-  const proAccounts = clientAccounts.filter(c => (c.products || []).includes('pro'));
-
   return jsonResponse({
-    success: true,
-    stats: {
+    success: true, stats: {
       accounts: clientAccounts.length,
-      pro: proAccounts.length,
+      pro: clientAccounts.filter(c => (c.products || []).includes('pro')).length,
       active: clientAccounts.filter(c => c.active !== false).length,
-      sites: proAccounts.length,
-      flipbooks: clientAccounts.filter(c => (c.products || []).includes('flipbook')).length,
       createdToday: clientAccounts.filter(c => (c.createdAt || '').startsWith(now)).length,
     }
   }, headers);

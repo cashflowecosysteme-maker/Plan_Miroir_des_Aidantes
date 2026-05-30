@@ -6,13 +6,14 @@
 // Le dashboard.html ne voit JAMAIS la clé OpenRouter.
 //
 // ARCHITECTURE :
-//   dashboard.html → fetch('/api/chat') → Ce Worker → OpenRouter API
+//   dashboard.html → fetch('/api/login') → Ce Worker → OpenRouter API
 //
 // DÉPLOIEMENT :
 //   1. wrangler kv:namespace create "NYXIA_KV"
 //   2. Collez l'ID dans wrangler.toml
 //   3. wrangler secret put OPENROUTER_API_KEY  ← votre clé secrète
-//   4. wrangler deploy
+//   4. wrangler secret put ADMIN_PASSWORD       ← mot de passe admin
+//   5. wrangler deploy
 // ============================================================
 
 // ─── Qui est VRAIMENT NyXia — Le Miroir Bienveillant ───
@@ -173,9 +174,8 @@ RÈGLES :
 - Si on te demande qui t'a créée, dis "J'ai été créée par Diane Boyer ✦"`
 };
 
-// ─── Modèles OpenRouter recommandés ───
+// ─── Modèles OpenRouter ───
 const OPENROUTER_MODEL = 'z-ai/glm-5v-turbo';
-// Alternatives ZhipuAI : 'zhipu/glm-4', 'zhipu/glm-4-plus', 'z-ai/glm-5v-turbo'
 
 export default {
   async fetch(request, env) {
@@ -195,7 +195,12 @@ export default {
 
     try {
 
-      // ═══ AUTH CLIENT ═══
+      // ═══ CLIENT AUTH ═══
+      // Route /api/login (appelée par login.html)
+      if (path === '/api/login' && request.method === 'POST') {
+        return handleClientLogin(request, env, corsHeaders);
+      }
+      // Alias /api/auth/login (compatibilité)
       if (path === '/api/auth/login' && request.method === 'POST') {
         return handleClientLogin(request, env, corsHeaders);
       }
@@ -213,43 +218,39 @@ export default {
         return handleChat(request, env, corsHeaders);
       }
 
-      // ═══ ADMIN ═══
+      // ═══ ADMIN AUTH ═══
       if (path === '/api/admin/login' && request.method === 'POST') {
         return handleAdminLogin(request, env, corsHeaders);
       }
-      if (path === '/api/admin/clients' && request.method === 'POST') {
-        return handleCreateClient(request, env, corsHeaders);
-      }
+
+      // ═══ ADMIN ROUTES (PROTÉGÉES) ═══
+      // Chaque route admin vérifie le token avant d'exécuter
       if (path === '/api/admin/clients' && request.method === 'GET') {
-        return handleListClients(request, env, corsHeaders);
+        return withAdminAuth(request, env, corsHeaders, handleListClients);
+      }
+      if (path === '/api/admin/clients' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleCreateClient);
+      }
+      if (path === '/api/admin/clients' && request.method === 'PUT') {
+        return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
+      }
+      if (path === '/api/admin/clients' && request.method === 'DELETE') {
+        return withAdminAuth(request, env, corsHeaders, handleDeleteClientById);
+      }
+      if (path === '/api/admin/clients/update' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
+      }
+      if (path === '/api/admin/clients/delete' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleDeleteClientByEmail);
       }
       if (path.startsWith('/api/admin/clients/') && request.method === 'DELETE') {
         const id = path.split('/').pop();
-        return handleDeleteClient(id, env, corsHeaders);
-      }
-      if (path.endsWith('/toggle') && request.method === 'PATCH') {
-        const id = path.split('/')[3];
-        return handleToggleClient(id, env, corsHeaders);
+        return withAdminAuth(request, env, corsHeaders, (req, env2, h) => handleDeleteClient(id, env2, h));
       }
 
-      // ═══ MESSAGES ═══
-      if (path === '/api/messages' && request.method === 'GET') {
-        return handleGetMessages(request, env, corsHeaders);
-      }
-      if (path === '/api/messages' && request.method === 'POST') {
-        return handleSendMessage(request, env, corsHeaders);
-      }
-
-      // ═══ PROJECTS ═══
-      if (path === '/api/projects' && request.method === 'GET') {
-        return handleGetProjects(request, env, corsHeaders);
-      }
-      if (path === '/api/projects' && request.method === 'POST') {
-        return handleCreateProject(request, env, corsHeaders);
-      }
-      if (path.startsWith('/api/projects/') && request.method === 'DELETE') {
-        const id = path.split('/').pop();
-        return handleDeleteProject(id, env, corsHeaders);
+      // ═══ ADMIN STATS (PROTÉGÉ) ═══
+      if (path === '/api/admin/stats' && request.method === 'GET') {
+        return withAdminAuth(request, env, corsHeaders, handleAdminStats);
       }
 
       return new Response(JSON.stringify({ error: 'Route non trouvée' }), {
@@ -267,13 +268,34 @@ export default {
 };
 
 // ============================================================
-//  CHAT — OPENROUTER PROXY (Le cerveau de NyXia)
+//  ADMIN AUTH MIDDLEWARE — Vérifie le token admin
+// ============================================================
+async function verifyAdminToken(request, env) {
+  const authHeader = request.headers.get('X-Admin-Token');
+  if (!authHeader) return false;
+
+  const sessionData = await env.NYXIA_KV.get('admin_session_' + authHeader);
+  return sessionData === 'true';
+}
+
+async function withAdminAuth(request, env, corsHeaders, handler) {
+  const isValid = await verifyAdminToken(request, env);
+  if (!isValid) {
+    return new Response(JSON.stringify({ error: 'Non autorisé — session admin requise' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+  return handler(request, env, corsHeaders);
+}
+
+// ============================================================
+//  CHAT — OPENROUTER PROXY
 // ============================================================
 async function handleChat(request, env, headers) {
   const body = await request.json();
   const { message, history, userName, agent } = body;
 
-  // Vérifier la clé API
   const apiKey = env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return jsonResponse({
@@ -281,16 +303,13 @@ async function handleChat(request, env, headers) {
     }, headers);
   }
 
-  // Choisir le bon prompt système selon l'agent
   const agentKey = agent || 'nyxia';
   const systemPrompt = SYSTEM_PROMPTS[agentKey] || SYSTEM_PROMPTS.nyxia;
 
-  // Construire l'historique pour OpenRouter
   const messages = [
     { role: 'system', content: systemPrompt },
   ];
 
-  // Ajouter le nom de l'utilisateur si disponible
   if (userName) {
     messages.push({
       role: 'system',
@@ -298,7 +317,6 @@ async function handleChat(request, env, headers) {
     });
   }
 
-  // Ajouter l'historique de conversation
   if (history && history.length > 0) {
     for (const msg of history) {
       messages.push({
@@ -308,11 +326,9 @@ async function handleChat(request, env, headers) {
     }
   }
 
-  // Ajouter le message actuel
   messages.push({ role: 'user', content: message });
 
   try {
-    // Appel OpenRouter
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -356,17 +372,17 @@ async function handleChat(request, env, headers) {
 async function handleClientLogin(request, env, headers) {
   const { email, password } = await request.json();
   const clients = await getClients(env);
-  const client = clients.find(c => c.email === email);
+  const client = clients.find(c => c.email === email.toLowerCase().trim());
 
   if (!client) {
     return jsonResponse({ error: 'Email ou mot de passe incorrect' }, { ...headers, status: 401 });
   }
   if (!client.active) {
-    return jsonResponse({ error: 'Compte désactivé' }, { ...headers, status: 403 });
+    return jsonResponse({ error: 'Compte désactivé. Contactez le support.' }, { ...headers, status: 403 });
   }
 
-  const isValid = await verifyPassword(password, client.password);
-  if (!isValid) {
+  // Vérification du mot de passe (en clair, tel que créé par l'admin)
+  if (password !== client.password) {
     return jsonResponse({ error: 'Email ou mot de passe incorrect' }, { ...headers, status: 401 });
   }
 
@@ -377,13 +393,17 @@ async function handleClientLogin(request, env, headers) {
     email: client.email,
     firstName: client.firstName,
     lastName: client.lastName,
-    role: client.role,
+    name: client.name,
+    role: client.role || 'client',
+    products: client.products || [],
     createdAt: Date.now()
   }), { expirationTtl: 86400 }); // 24h
 
   return jsonResponse({
     success: true,
     token: token,
+    firstname: client.firstName,
+    name: client.name,
     session: {
       id: client.id,
       firstName: client.firstName,
@@ -406,7 +426,7 @@ async function handleCheckAuth(request, env, headers) {
   }
 
   const session = JSON.parse(sessionData);
-  return jsonResponse({ valid: true, email: session.email, name: session.firstName }, headers);
+  return jsonResponse({ valid: true, email: session.email, name: session.name || session.firstName, role: session.role }, headers);
 }
 
 async function handleLogout(request, env, headers) {
@@ -422,36 +442,47 @@ async function handleLogout(request, env, headers) {
 // ============================================================
 async function handleAdminLogin(request, env, headers) {
   const { password } = await request.json();
-  const adminPass = (await env.NYXIA_KV.get('admin_password')) || 'nyxia2024';
+  const adminPass = await env.NYXIA_KV.get('admin_password') || 'NyXiaAdmin2026!';
 
   if (password === adminPass) {
     const token = crypto.randomUUID();
-    await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 86400 });
+    await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 }); // 4h
     return jsonResponse({ success: true, token: token }, headers);
   }
   return jsonResponse({ error: 'Mot de passe incorrect' }, { ...headers, status: 401 });
 }
 
 // ============================================================
-//  CLIENT MANAGEMENT (ADMIN)
+//  CLIENT MANAGEMENT (ADMIN — PROTÉGÉ)
 // ============================================================
 async function handleCreateClient(request, env, headers) {
-  const { firstName, lastName, email, password, role } = await request.json();
+  const { firstName, lastName, name, email, password, role, products } = await request.json();
 
-  if (!firstName || !lastName || !email || !password) {
-    return jsonResponse({ error: 'Champs manquants' }, { ...headers, status: 400 });
+  if (!name && (!firstName || !lastName)) {
+    return jsonResponse({ error: 'Nom requis' }, { ...headers, status: 400 });
+  }
+  if (!email || !password) {
+    return jsonResponse({ error: 'Email et mot de passe requis' }, { ...headers, status: 400 });
   }
 
   const clients = await getClients(env);
-  if (clients.find(c => c.email === email)) {
+  if (clients.find(c => c.email === email.toLowerCase().trim())) {
     return jsonResponse({ error: 'Email déjà utilisé' }, { ...headers, status: 409 });
   }
 
+  const fullName = name || (firstName + ' ' + lastName);
+
+  // MOT DE PASSE EN CLAIR — l'admin le crée pour le donner au client
+  // Pas de hash : le client doit taper exactement ce que l'admin lui a donné
   const client = {
     id: crypto.randomUUID(),
-    firstName, lastName, email,
-    password: await hashPassword(password),
-    role: role || 'Praticienne',
+    firstName: firstName || fullName.split(' ')[0],
+    lastName: lastName || fullName.split(' ').slice(1).join(' '),
+    name: fullName,
+    email: email.toLowerCase().trim(),
+    password: password, // EN CLAIR pour que l'admin puisse le partager
+    role: role || 'client',
+    products: Array.isArray(products) ? products : [],
     active: true,
     createdAt: new Date().toISOString(),
   };
@@ -459,14 +490,73 @@ async function handleCreateClient(request, env, headers) {
   clients.push(client);
   await saveClients(env, clients);
 
-  const { password: _, ...safeClient } = client;
-  return jsonResponse({ success: true, client: safeClient }, headers);
+  return jsonResponse({ success: true, client: client }, headers);
 }
 
 async function handleListClients(request, env, headers) {
   const clients = await getClients(env);
-  const safeClients = clients.map(({ password: _, ...c }) => c);
-  return jsonResponse({ clients: safeClients }, headers);
+  // On RETOURNE les mots de passe car l'admin en a besoin pour les partager aux clients
+  return jsonResponse({ clients: clients }, headers);
+}
+
+async function handleUpdateClient(request, env, headers) {
+  const body = await request.json();
+  const { email, firstName, lastName, name, newEmail, password, products, status } = body;
+
+  if (!email) {
+    return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
+  }
+
+  const clients = await getClients(env);
+  const idx = clients.findIndex(c => c.email === email.toLowerCase().trim());
+  if (idx === -1) {
+    return jsonResponse({ error: 'Client non trouvé' }, { ...headers, status: 404 });
+  }
+
+  // Mise à jour des champs
+  if (firstName) clients[idx].firstName = firstName;
+  if (lastName) clients[idx].lastName = lastName;
+  if (name) clients[idx].name = name;
+  else if (firstName || lastName) clients[idx].name = (clients[idx].firstName || '') + ' ' + (clients[idx].lastName || '');
+
+  // Changement d'email
+  if (newEmail && newEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
+    const duplicate = clients.findIndex(c => c.email === newEmail.toLowerCase().trim());
+    if (duplicate !== -1) {
+      return jsonResponse({ error: 'Cet email est déjà utilisé' }, { ...headers, status: 409 });
+    }
+    clients[idx].email = newEmail.toLowerCase().trim();
+  }
+
+  // Changement de mot de passe
+  if (password && password.length >= 6) {
+    clients[idx].password = password;
+  }
+
+  // Produits
+  if (Array.isArray(products)) {
+    clients[idx].products = products;
+  }
+
+  // Statut
+  if (status === 'active' || status === 'suspended') {
+    clients[idx].active = (status === 'active');
+  }
+
+  await saveClients(env, clients);
+  return jsonResponse({ success: true, client: clients[idx] }, headers);
+}
+
+async function handleDeleteClientByEmail(request, env, headers) {
+  const { email } = await request.json();
+  if (!email) {
+    return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
+  }
+
+  let clients = await getClients(env);
+  clients = clients.filter(c => c.email !== email.toLowerCase().trim());
+  await saveClients(env, clients);
+  return jsonResponse({ success: true }, headers);
 }
 
 async function handleDeleteClient(id, env, headers) {
@@ -476,63 +566,33 @@ async function handleDeleteClient(id, env, headers) {
   return jsonResponse({ success: true }, headers);
 }
 
-async function handleToggleClient(id, env, headers) {
+async function handleDeleteClientById(request, env, headers) {
+  const url = new URL(request.url);
+  const id = url.pathname.split('/').pop();
+  return handleDeleteClient(id, env, headers);
+}
+
+// ============================================================
+//  ADMIN STATS
+// ============================================================
+async function handleAdminStats(request, env, headers) {
   const clients = await getClients(env);
-  const client = clients.find(c => c.id === id);
-  if (!client) return jsonResponse({ error: 'Client non trouvé' }, { ...headers, status: 404 });
-  client.active = !client.active;
-  await saveClients(env, clients);
-  return jsonResponse({ success: true, active: client.active }, headers);
-}
+  const now = new Date().toISOString().split('T')[0];
 
-// ============================================================
-//  MESSAGES (Messagerie Diane ↔ Client)
-// ============================================================
-async function handleGetMessages(request, env, headers) {
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  const messagesData = await env.NYXIA_KV.get('messages');
-  const messages = messagesData ? JSON.parse(messagesData) : [];
-  return jsonResponse({ messages }, headers);
-}
+  const clientAccounts = clients.filter(c => (c.role || 'client') !== 'superadmin');
+  const proAccounts = clientAccounts.filter(c => (c.products || []).includes('pro'));
 
-async function handleSendMessage(request, env, headers) {
-  const { from, text } = await request.json();
-  const messagesData = await env.NYXIA_KV.get('messages');
-  const messages = messagesData ? JSON.parse(messagesData) : [];
-  messages.push({ from, text, date: new Date().toISOString() });
-  await env.NYXIA_KV.put('messages', JSON.stringify(messages));
-  return jsonResponse({ success: true }, headers);
-}
-
-// ============================================================
-//  PROJECTS
-// ============================================================
-async function handleGetProjects(request, env, headers) {
-  const projectsData = await env.NYXIA_KV.get('projects');
-  const projects = projectsData ? JSON.parse(projectsData) : [];
-  return jsonResponse({ projects }, headers);
-}
-
-async function handleCreateProject(request, env, headers) {
-  const { name, description, type } = await request.json();
-  const projectsData = await env.NYXIA_KV.get('projects');
-  const projects = projectsData ? JSON.parse(projectsData) : [];
-  const project = {
-    id: crypto.randomUUID(),
-    name, description, type,
-    createdAt: new Date().toISOString(),
-  };
-  projects.push(project);
-  await env.NYXIA_KV.put('projects', JSON.stringify(projects));
-  return jsonResponse({ success: true, project }, headers);
-}
-
-async function handleDeleteProject(id, env, headers) {
-  let projectsData = await env.NYXIA_KV.get('projects');
-  let projects = projectsData ? JSON.parse(projectsData) : [];
-  projects = projects.filter(p => p.id !== id);
-  await env.NYXIA_KV.put('projects', JSON.stringify(projects));
-  return jsonResponse({ success: true }, headers);
+  return jsonResponse({
+    success: true,
+    stats: {
+      accounts: clientAccounts.length,
+      pro: proAccounts.length,
+      active: clientAccounts.filter(c => c.active !== false).length,
+      sites: proAccounts.length,
+      flipbooks: clientAccounts.filter(c => (c.products || []).includes('flipbook')).length,
+      createdToday: clientAccounts.filter(c => (c.createdAt || '').startsWith(now)).length,
+    }
+  }, headers);
 }
 
 // ============================================================
@@ -545,21 +605,6 @@ async function getClients(env) {
 
 async function saveClients(env, clients) {
   await env.NYXIA_KV.put('clients', JSON.stringify(clients));
-}
-
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(hash)));
-}
-
-async function verifyPassword(password, hash) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const computedHash = await crypto.subtle.digest('SHA-256', data);
-  const computed = btoa(String.fromCharCode(...new Uint8Array(computedHash)));
-  return computed === hash;
 }
 
 function jsonResponse(data, extraHeaders = {}) {

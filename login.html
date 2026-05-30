@@ -1,468 +1,397 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NyXia IA — Connexion</title>
-<link rel="icon" type="image/png" href="NyXia-FavIcon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden}
-body{
-  font-family:'Outfit',sans-serif;
-  background:#0A1628;
-  color:#FFFFFF;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-}
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="/FavIcon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NyXia IA — Connexion</title>
 
-/* ─── Starfield canvas ─── */
-canvas#starry-canvas{
-  position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;
-  pointer-events:none;
-}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-/* ─── Animations ─── */
-@keyframes nyxia-cardIn{
-  from{opacity:0;transform:translateY(24px) scale(.97)}
-  to{opacity:1;transform:none}
-}
-@keyframes nyxia-avatarPulse{
-  0%,100%{box-shadow:0 0 40px rgba(123,92,255,.4),0 0 80px rgba(123,92,255,.15)}
-  50%{box-shadow:0 0 60px rgba(123,92,255,.65),0 0 100px rgba(123,92,255,.25)}
-}
-@keyframes nyxia-spin{to{transform:rotate(360deg)}}
-@keyframes nyxia-fadeIn{
-  from{opacity:0;transform:translateY(-4px)}
-  to{opacity:1;transform:none}
-}
+  <style>
+    :root {
+      --bg1: #0F1C3F;
+      --bg2: #1A2554;
+      --bg3: #2A3A6E;
+      --p:   #7B5CFF;
+      --p2:  #5A6CFF;
+      --p3:  #4FA3FF;
+      --glow: rgba(123,92,255,0.4);
+      --t:   #FFFFFF;
+      --t2:  #D6D9F0;
+      --t3:  #8891B8;
+      --green: #00E676;
+      --red: #FF4B6E;
+    }
 
-/* ─── Login wrapper ─── */
-.login-wrapper{
-  position:relative;z-index:1;
-  width:100%;max-width:420px;
-  padding:24px;
-}
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-/* ─── Card ─── */
-.login-card{
-  background:rgba(26,37,84,.55);
-  border:1px solid rgba(123,92,255,.2);
-  border-radius:24px;
-  padding:40px 36px;
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  box-shadow:0 24px 80px rgba(0,0,0,.4),0 0 60px rgba(123,92,255,.08);
-  animation:nyxia-cardIn .5s ease;
-}
+    body {
+      background: var(--bg1);
+      color: var(--t2);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
 
-/* ─── Header ─── */
-.header{text-align:center;margin-bottom:36px}
-.avatar{
-  width:80px;height:80px;border-radius:50%;
-  border:2px solid rgba(123,92,255,.5);
-  display:block;margin:0 auto 16px;
-  animation:nyxia-avatarPulse 3s ease-in-out infinite;
-}
-.brand{
-  font-family:'Space Grotesk',sans-serif;
-  font-size:26px;font-weight:700;
-  background:linear-gradient(135deg,#a78bfa,#4FA3FF);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-  filter:drop-shadow(0 0 16px rgba(123,92,255,.4));
-  margin-bottom:6px;
-}
-.subtitle{color:#8891B8;font-size:13px}
+    /* Fond étoilé géré par starry-bg.js */
+    canvas#starry-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
 
-/* ─── Form fields ─── */
-.field{margin-bottom:18px}
-.field label{
-  font-family:'Space Grotesk',sans-serif;
-  font-size:12px;font-weight:600;
-  color:#8891B8;
-  text-transform:uppercase;
-  letter-spacing:.8px;
-  display:block;
-  margin-bottom:8px;
-}
-.form-input{
-  width:100%;
-  background:rgba(15,28,63,.7);
-  border:1px solid rgba(123,92,255,.2);
-  border-radius:12px;
-  color:#FFFFFF;
-  font-family:'Outfit',sans-serif;
-  font-size:15px;
-  padding:13px 16px;
-  outline:none;
-  transition:border-color .2s,box-shadow .2s;
-}
-.form-input:focus{
-  border-color:rgba(123,92,255,.55);
-  box-shadow:0 0 0 3px rgba(123,92,255,.1);
-}
-.form-input::placeholder{color:#8891B8}
+    /* Glow ambiance */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 30% 20%, rgba(123,92,255,0.15) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 70% 80%, rgba(79,163,255,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-/* ─── Password toggle ─── */
-.pw-wrap{position:relative}
-.pw-wrap .form-input{padding-right:44px}
-.pw-toggle{
-  position:absolute;right:14px;top:50%;transform:translateY(-50%);
-  background:none;border:none;color:#8891B8;cursor:pointer;
-  font-size:16px;padding:4px;transition:color .2s;
-}
-.pw-toggle:hover{color:#D6D9F0}
+    /* ── CARD LOGIN ── */
+    .login-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+    }
 
-/* ─── Submit ─── */
-.btn-submit{
-  width:100%;padding:15px;
-  border-radius:50px;border:none;
-  background:linear-gradient(135deg,#7B5CFF,#5A6CFF);
-  color:#fff;
-  font-family:'Space Grotesk',sans-serif;
-  font-size:16px;font-weight:700;
-  cursor:pointer;
-  box-shadow:0 0 28px rgba(123,92,255,.45);
-  transition:all .25s;
-  margin-top:8px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-}
-.btn-submit:hover:not(:disabled){
-  transform:translateY(-2px);
-  box-shadow:0 0 48px rgba(123,92,255,.7);
-}
-.btn-submit:disabled{opacity:.6;cursor:not-allowed}
-.spinner{
-  width:16px;height:16px;
-  border:2px solid rgba(255,255,255,.3);
-  border-top-color:#fff;
-  border-radius:50%;
-  animation:nyxia-spin .7s linear infinite;
-  display:inline-block;
-}
+    .login-card {
+      background: rgba(26,37,84,0.55);
+      border: 1px solid rgba(123,92,255,0.2);
+      border-radius: 24px;
+      padding: 40px 36px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.4), 0 0 60px rgba(123,92,255,0.08);
+      animation: cardIn .5s ease;
+    }
+    @keyframes cardIn {
+      from { opacity:0; transform:translateY(24px) scale(.97); }
+      to   { opacity:1; transform:none; }
+    }
 
-/* ─── Message ─── */
-.msg-box{
-  padding:12px 16px;border-radius:12px;
-  font-size:13px;margin-top:16px;text-align:center;
-  animation:nyxia-fadeIn .3s ease;
-}
-.msg-box.error{
-  background:rgba(255,75,110,.1);
-  border:1px solid rgba(255,75,110,.3);
-  color:#ff8fab;
-}
-.msg-box.success{
-  background:rgba(0,230,118,.1);
-  border:1px solid rgba(0,230,118,.3);
-  color:#00E676;
-}
+    /* ── HEADER ── */
+    .login-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .login-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(123,92,255,0.5);
+      box-shadow: 0 0 40px rgba(123,92,255,0.4), 0 0 80px rgba(123,92,255,0.15);
+      margin: 0 auto 16px;
+      display: block;
+      animation: avatarPulse 3s ease-in-out infinite;
+    }
+    @keyframes avatarPulse {
+      0%, 100% { box-shadow: 0 0 40px rgba(123,92,255,0.4), 0 0 80px rgba(123,92,255,0.15); }
+      50%       { box-shadow: 0 0 60px rgba(123,92,255,0.65), 0 0 100px rgba(123,92,255,0.25); }
+    }
+    .login-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, var(--p3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 16px rgba(123,92,255,0.4));
+      margin-bottom: 6px;
+    }
+    .login-subtitle {
+      color: var(--t3);
+      font-size: 13px;
+    }
 
-/* ─── Footer ─── */
-.footer{
-  text-align:center;margin-top:24px;
-  color:#8891B8;font-size:12px;line-height:1.7;
-}
-.footer a{color:#4FA3FF;text-decoration:none;transition:text-decoration .2s}
-.footer a:hover{text-decoration:underline}
-.copyright{opacity:.5;margin-top:2px}
-</style>
+    /* ── FORM ── */
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--t3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .form-input {
+      width: 100%;
+      background: rgba(15,28,63,0.7);
+      border: 1px solid rgba(123,92,255,0.2);
+      border-radius: 12px;
+      color: var(--t);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      padding: 13px 16px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-input:focus {
+      border-color: rgba(123,92,255,0.55);
+      box-shadow: 0 0 0 3px rgba(123,92,255,0.1);
+    }
+    .form-input::placeholder { color: var(--t3); }
+
+    /* ── PASSWORD TOGGLE ── */
+    .input-wrap {
+      position: relative;
+    }
+    .toggle-pw {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--t3);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      transition: color .2s;
+    }
+    .toggle-pw:hover { color: var(--t2); }
+
+    /* ── BTN ── */
+    .btn-login {
+      width: 100%;
+      padding: 15px;
+      border-radius: 50px;
+      border: none;
+      background: linear-gradient(135deg, var(--p), var(--p2));
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 28px rgba(123,92,255,0.45);
+      transition: all .25s;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 0 48px rgba(123,92,255,0.7);
+    }
+    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── ERROR / SUCCESS ── */
+    .msg-box {
+      display: none;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      margin-top: 16px;
+      text-align: center;
+      animation: fadeIn .3s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    .msg-box.error {
+      background: rgba(255,75,110,0.1);
+      border: 1px solid rgba(255,75,110,0.3);
+      color: #ff8fab;
+    }
+    .msg-box.success {
+      background: rgba(0,230,118,0.1);
+      border: 1px solid rgba(0,230,118,0.3);
+      color: var(--green);
+    }
+
+    /* ── FOOTER ── */
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      color: var(--t3);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .login-footer a {
+      color: var(--p3);
+      text-decoration: none;
+    }
+    .login-footer a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
 
-<canvas id="starry-canvas"></canvas>
+  <canvas id="starry-canvas"></canvas>
 
-<div class="login-wrapper">
-  <div class="login-card">
-    <!-- Header -->
-    <div class="header">
-      <img class="avatar" src="NyXia.png" alt="NyXia IA">
-      <div class="brand">NyXia IA</div>
-      <div class="subtitle">Connecte-toi pour accéder à ton espace</div>
-    </div>
+  <div class="login-wrap">
+    <div class="login-card">
 
-    <!-- Form -->
-    <form id="loginForm">
-      <!-- Prénom -->
-      <div class="field">
-        <label for="nyxia-firstname">Ton prénom</label>
-        <input class="form-input" type="text" id="nyxia-firstname"
-               placeholder="Ex : Sophie, Marc, Julie..." autocomplete="given-name">
+      <!-- HEADER -->
+      <div class="login-header">
+        <img src="/NyXia.png" alt="NyXia IA" class="login-avatar">
+        <div class="login-title">NyXia IA</div>
+        <div class="login-subtitle">Connecte-toi pour accéder à ton espace</div>
       </div>
 
-      <!-- Email -->
-      <div class="field">
-        <label for="nyxia-email">Adresse email</label>
-        <input class="form-input" type="email" id="nyxia-email"
-               placeholder="ton@email.com" autocomplete="email" required>
-      </div>
+      <!-- FORM -->
+      <form id="login-form" onsubmit="return false">
 
-      <!-- Password -->
-      <div class="field">
-        <label for="nyxia-password">Mot de passe</label>
-        <div class="pw-wrap">
-          <input class="form-input" type="password" id="nyxia-password"
-                 placeholder="••••••••" autocomplete="current-password" required>
-          <button type="button" class="pw-toggle" id="pwToggle" title="Afficher/masquer">👁</button>
+        <div class="form-group">
+          <label class="form-label" for="firstname">Ton prénom</label>
+          <input class="form-input" type="text" id="firstname" placeholder="Ex : Sophie, Marc, Julie..." autocomplete="given-name">
         </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Adresse email</label>
+          <input class="form-input" type="email" id="email" placeholder="ton@email.com" autocomplete="email" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Mot de passe</label>
+          <div class="input-wrap">
+            <input class="form-input" type="password" id="password" placeholder="••••••••" autocomplete="current-password" required style="padding-right:44px">
+            <button type="button" class="toggle-pw" id="toggle-pw" onclick="togglePw()" title="Afficher/masquer">👁</button>
+          </div>
+        </div>
+
+        <button class="btn-login" id="btn-login" onclick="doLogin()">
+          <div class="spinner" id="spinner"></div>
+          <span id="btn-text">Se connecter</span>
+        </button>
+
+        <div class="msg-box" id="msg-box"></div>
+
+      </form>
+
+      <!-- FOOTER -->
+      <div class="login-footer">
+        Pas encore client ? <a href="https://nyxiapublicationweb.com" target="_blank">Découvrir NyXia IA</a><br>
+        <span style="opacity:0.5">© 2026 NyXia IA — Publication Web™ visionnaire depuis 1997</span>
       </div>
 
-      <!-- Submit -->
-      <button type="submit" class="btn-submit" id="submitBtn">
-        <span id="btnText">Se connecter</span>
-      </button>
-
-      <!-- Message -->
-      <div id="msgBox" class="msg-box" style="display:none"></div>
-    </form>
-
-    <!-- Footer -->
-    <div class="footer">
-      Pas encore client ? <a href="https://nyxiapublicationweb.com" target="_blank" rel="noopener noreferrer">Découvrir NyXia IA</a>
-      <br>
-      <span class="copyright">© 2026 NyXia IA — Publication Web™ visionnaire depuis 1997</span>
     </div>
   </div>
-</div>
 
-<script>
-/* ═══════════════════════════════════════════════
-   STARFIELD — exact copy of starry-background.tsx
-   ═══════════════════════════════════════════════ */
-(function(){
-  var canvas = document.getElementById('starry-canvas');
-  var ctx = canvas.getContext('2d');
-  var stars = [], shootingStars = [], nebulae = [], animationId;
+  <script src="/js/starry-bg.js" defer></script>
 
-  var starColors = [
-    'rgba(167,139,250,',
-    'rgba(79,163,255,',
-    'rgba(255,255,255,',
-    'rgba(244,200,66,',
-    'rgba(123,92,255,'
-  ];
-
-  function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    initStars();
-  }
-
-  function initStars(){
-    var count = Math.floor((canvas.width * canvas.height) / 2800);
-    stars = [];
-    for(var i = 0; i < count; i++){
-      var colorIdx = Math.random() < 0.03 ? 3 : Math.floor(Math.random() * 3);
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 2.2 + 0.3,
-        opacity: Math.random() * 0.7 + 0.3,
-        twinkleSpeed: Math.random() * 0.03 + 0.005,
-        twinklePhase: Math.random() * Math.PI * 2,
-        color: starColors[colorIdx]
-      });
-    }
-    nebulae = [];
-    var nebulaCount = Math.floor(Math.random() * 3) + 2;
-    for(var i = 0; i < nebulaCount; i++){
-      nebulae.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 200 + 100,
-        color1: 'rgba(' + (Math.random() < 0.5 ? '123,92,255' : '79,163,255') + ',',
-        color2: 'rgba(' + (Math.random() < 0.5 ? '90,108,255' : '167,139,250') + ',',
-        phase: Math.random() * Math.PI * 2,
-        speed: Math.random() * 0.002 + 0.001
-      });
-    }
-  }
-
-  function drawNebulae(time){
-    for(var i = 0; i < nebulae.length; i++){
-      var n = nebulae[i];
-      var pulse = Math.sin(time * n.speed + n.phase) * 0.5 + 0.5;
-      var radius = n.radius * (0.8 + pulse * 0.4);
-      var gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, radius);
-      gradient.addColorStop(0, n.color1 + (0.04 + pulse * 0.02) + ')');
-      gradient.addColorStop(0.5, n.color2 + (0.02 + pulse * 0.01) + ')');
-      gradient.addColorStop(1, 'rgba(10,22,40,0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(n.x - radius, n.y - radius, radius * 2, radius * 2);
-    }
-  }
-
-  function drawStars(time){
-    for(var i = 0; i < stars.length; i++){
-      var s = stars[i];
-      var twinkle = Math.sin(time * s.twinkleSpeed + s.twinklePhase) * 0.5 + 0.5;
-      var currentOpacity = s.opacity * (0.4 + twinkle * 0.6);
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-      ctx.fillStyle = s.color + currentOpacity + ')';
-      ctx.fill();
-      if(s.size > 1.4){
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = s.color + (currentOpacity * 0.08) + ')';
-        ctx.fill();
+  <script>
+    /* ══════════════════════════════════
+       AUTH CHECK — redirige si déjà connecté
+    ══════════════════════════════════ */
+    ;(function() {
+      var token = sessionStorage.getItem('nyxia_token')
+      if (token) {
+        fetch('/api/check-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token })
+        })
+        .then(function(r) { return r.json() })
+        .then(function(data) {
+          if (data.valid) window.location.href = '/dashboard.html'
+        })
+        .catch(function(){})
       }
-    }
-  }
+    })()
 
-  function spawnShootingStar(){
-    if(shootingStars.length > 2) return;
-    if(Math.random() > 0.003) return;
-    shootingStars.push({
-      x: Math.random() * canvas.width * 0.8,
-      y: Math.random() * canvas.height * 0.4,
-      length: Math.random() * 80 + 40,
-      speed: Math.random() * 4 + 3,
-      angle: Math.PI / 6 + Math.random() * 0.3,
-      opacity: 1,
-      life: 0,
-      maxLife: 60 + Math.random() * 40
-    });
-  }
+    /* ══════════════════════════════════
+       LOGIN
+    ══════════════════════════════════ */
+    function doLogin() {
+      var firstname = document.getElementById('firstname').value.trim()
+      var email    = document.getElementById('email').value.trim()
+      var password = document.getElementById('password').value.trim()
+      var btn      = document.getElementById('btn-login')
+      var spinner  = document.getElementById('spinner')
+      var btnText  = document.getElementById('btn-text')
+      var msgBox   = document.getElementById('msg-box')
 
-  function drawShootingStars(){
-    var alive = [];
-    for(var i = 0; i < shootingStars.length; i++){
-      var s = shootingStars[i];
-      s.x += Math.cos(s.angle) * s.speed;
-      s.y += Math.sin(s.angle) * s.speed;
-      s.life++;
-      s.opacity = 1 - s.life / s.maxLife;
-      if(s.life >= s.maxLife) continue;
-      alive.push(s);
-
-      var tailX = s.x - Math.cos(s.angle) * s.length;
-      var tailY = s.y - Math.sin(s.angle) * s.length;
-      var gradient = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
-      gradient.addColorStop(0, 'rgba(167,139,250,0)');
-      gradient.addColorStop(0.7, 'rgba(167,139,250,' + (s.opacity * 0.4) + ')');
-      gradient.addColorStop(1, 'rgba(255,255,255,' + s.opacity + ')');
-
-      ctx.beginPath();
-      ctx.moveTo(tailX, tailY);
-      ctx.lineTo(s.x, s.y);
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,' + s.opacity + ')';
-      ctx.fill();
-    }
-    shootingStars = alive;
-  }
-
-  function animate(time){
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    var bg = ctx.createRadialGradient(
-      canvas.width * 0.3, canvas.height * 0.2, 0,
-      canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.8
-    );
-    bg.addColorStop(0, 'rgba(15,28,63,0.15)');
-    bg.addColorStop(0.5, 'rgba(10,22,40,0.1)');
-    bg.addColorStop(1, 'rgba(10,22,40,0)');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    drawNebulae(time);
-    drawStars(time);
-    spawnShootingStar();
-    drawShootingStars();
-    animationId = requestAnimationFrame(animate);
-  }
-
-  resize();
-  animationId = requestAnimationFrame(animate);
-  window.addEventListener('resize', resize);
-})();
-
-/* ═══════════════════════════════════════════════
-   LOGIN FORM LOGIC — localStorage auth
-   ═══════════════════════════════════════════════ */
-(function(){
-  var form = document.getElementById('loginForm');
-  var submitBtn = document.getElementById('submitBtn');
-  var btnText = document.getElementById('btnText');
-  var msgBox = document.getElementById('msgBox');
-  var pwToggle = document.getElementById('pwToggle');
-  var pwInput = document.getElementById('nyxia-password');
-
-  pwToggle.addEventListener('click', function(){
-    if(pwInput.type === 'password'){
-      pwInput.type = 'text';
-      pwToggle.textContent = '👁‍🗨';
-    } else {
-      pwInput.type = 'password';
-      pwToggle.textContent = '👁';
-    }
-  });
-
-  function showMsg(text, type){
-    msgBox.style.display = 'block';
-    msgBox.className = 'msg-box ' + type;
-    msgBox.textContent = text;
-  }
-
-  form.addEventListener('submit', function(e){
-    e.preventDefault();
-    var email = document.getElementById('nyxia-email').value.trim();
-    var password = document.getElementById('nyxia-password').value.trim();
-    var firstname = document.getElementById('nyxia-firstname').value.trim();
-
-    if(!email || !password){
-      showMsg('Remplis tous les champs.', 'error');
-      return;
-    }
-
-    submitBtn.disabled = true;
-    btnText.innerHTML = '<span class="spinner"></span> Connexion...';
-
-    // Check localStorage for accounts
-    var accounts = JSON.parse(localStorage.getItem('nyxia_accounts') || '[]');
-    var found = null;
-    for(var i = 0; i < accounts.length; i++){
-      if(accounts[i].email === email && accounts[i].password === password){
-        found = accounts[i];
-        break;
+      if (!email || !password) {
+        showMsg('Remplis tous les champs.', 'error')
+        return
       }
+
+      btn.disabled    = true
+      spinner.style.display = 'block'
+      btnText.textContent   = 'Connexion...'
+      msgBox.style.display  = 'none'
+
+      fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(function(r) { return r.json() })
+      .then(function(data) {
+        if (data.success && data.token) {
+          sessionStorage.setItem('nyxia_token', data.token)
+          // Sauvegarde le prénom — priorité : champ login, sinon retour API (firstname stocké dans KV)
+          var name = firstname || data.firstname || ''
+          if (name) {
+            // Capitalise proprement
+            name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+            localStorage.setItem('nyxia_username', name)
+          }
+          showMsg('✓ Connexion réussie ! Redirection...', 'success')
+          setTimeout(function() {
+            window.location.href = '/dashboard.html'
+          }, 1000)
+        } else {
+          showMsg(data.error || 'Identifiants incorrects.', 'error')
+          btn.disabled = false
+          spinner.style.display = 'none'
+          btnText.textContent   = 'Se connecter'
+        }
+      })
+      .catch(function() {
+        showMsg('Erreur de connexion. Réessaie.', 'error')
+        btn.disabled = false
+        spinner.style.display = 'none'
+        btnText.textContent   = 'Se connecter'
+      })
     }
 
-    setTimeout(function(){
-      if(found){
-        showMsg('✓ Connexion réussie ! Redirection...', 'success');
-        var capitalizedName = firstname
-          ? firstname.charAt(0).toUpperCase() + firstname.slice(1).toLowerCase()
-          : (found.name || email);
-        localStorage.setItem('nyxia_session', JSON.stringify({
-          token: 'tok_' + Date.now(),
-          email: found.email,
-          name: capitalizedName,
-          role: found.role || 'user',
-          products: found.products || []
-        }));
-        setTimeout(function(){
-          window.location.href = 'dashboard.html';
-        }, 800);
-      } else {
-        showMsg('Identifiants incorrects.', 'error');
-        submitBtn.disabled = false;
-        btnText.textContent = 'Se connecter';
-      }
-    }, 1500);
-  });
-})();
-</script>
+    function showMsg(text, type) {
+      var box = document.getElementById('msg-box')
+      box.textContent    = text
+      box.className      = 'msg-box ' + type
+      box.style.display  = 'block'
+    }
+
+    function togglePw() {
+      var input = document.getElementById('password')
+      input.type = input.type === 'password' ? 'text' : 'password'
+    }
+
+    /* Enter = login */
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin()
+    })
+  </script>
+
 </body>
 </html>

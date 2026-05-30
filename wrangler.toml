@@ -1,17 +1,32 @@
 name = "nyxia"
-main = "worker.js"
 compatibility_date = "2024-01-01"
 
-# KV Namespace pour stocker les comptes clients
-# Créez-le avec : wrangler kv:namespace create "NYXIA_KV"
-# Puis collez l'ID ici
+# ═══════════════════════════════════════════════════════
+# NYXIA — Cloudflare Pages (Advanced Mode)
+# ═══════════════════════════════════════════════════════
+# Le fichier _worker.js à la racine gère TOUT :
+#   - Routes /api/* → logique Worker (auth, chat, admin)
+#   - Tout le reste → fichiers statiques (HTML, images, CSS, JS)
+#
+# DÉPLOIEMENT :
+#   1. wrangler kv:namespace create "NYXIA_KV"   (si pas déjà fait)
+#   2. Collez l'ID dans le binding ci-dessous
+#   3. wrangler pages deploy . --project-name=nyxia
+#   4. wrangler secret put OPENROUTER_API_KEY
+# ═══════════════════════════════════════════════════════
+
+# KV Namespace — Stockage des comptes, sessions, données
 [[kv_namespaces]]
 binding = "NYXIA_KV"
 id = "9ada61c24ee0425899c14832a6be01e2"
 
-# Variables d'environnement (optionnel)
+# ═══════════════════════════════════════════════════════
+# SECRETS — Ne JAMAIS les mettre ici !
+# Définissez-les avec :
+#   wrangler secret put OPENROUTER_API_KEY
+#   wrangler secret put ADMIN_PASSWORD
+# ═══════════════════════════════════════════════════════
+
+# Variables non secrètes (optionnel)
 # [vars]
 # ADMIN_PASSWORD = "votre_mot_de_passe_admin"
-
-# Secrets (ne jamais les mettre dans ce fichier)
-# Définissez-les avec : wrangler secret put OPENAI_API_KEY

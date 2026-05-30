@@ -1,987 +1,494 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NyXia IA — Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NyXia IA — Mon Espace</title>
 
-  :root {
-    --bg1: #0A1628;
-    --bg2: #0F1C3F;
-    --bg3: #1A2554;
-    --p: #7B5CFF;
-    --p2: #5A6CFF;
-    --p3: #4FA3FF;
-    --t: #FFFFFF;
-    --t2: #D6D9F0;
-    --t3: #8891B8;
-    --t4: #4a5278;
-    --green: #00E676;
-    --gold: #F4C842;
-  }
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 
-  html, body {
-    height: 100%;
-    overflow: hidden;
-    background: var(--bg1);
-    color: var(--t2);
-    font-family: 'Outfit', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+  <style>
+    :root {
+      --bg1: #0A1628; --bg2: #0F1C3F; --bg3: #1A2554; --sidebar: #080f22;
+      --p: #7B5CFF; --p2: #5A6CFF; --p3: #4FA3FF; --glow: rgba(123,92,255,0.4);
+      --t: #FFFFFF; --t2: #D6D9F0; --t3: #8891B8; --t4: #4a5278;
+      --green: #00E676; --gold: #F4C842; --r: 14px;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--bg1); color: var(--t2); font-family: 'Outfit', sans-serif; display: flex; flex-direction: column; }
+    #starry-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
-  @keyframes breathe {
-    0%, 100% { box-shadow: 0 0 20px rgba(123,92,255,0.4); }
-    50% { box-shadow: 0 0 35px rgba(123,92,255,0.7), 0 0 60px rgba(123,92,255,0.2); }
-  }
-  @keyframes pulse-green {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .4; }
-  }
-  @keyframes msgIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: none; }
-  }
-  @keyframes dotBounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-5px); }
-  }
-  @keyframes speakPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .6; }
-  }
+    header {
+      position: relative; z-index: 100; height: 56px;
+      background: rgba(8,15,34,0.95); border-bottom: 1px solid rgba(123,92,255,0.12);
+      backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: space-between; padding: 0 20px 0 0; flex-shrink: 0;
+    }
+    .header-brand { width: 240px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-right: 1px solid rgba(123,92,255,0.1); height: 100%; }
+    .header-brand img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid rgba(123,92,255,0.5); box-shadow: 0 0 20px rgba(123,92,255,0.4); animation: breathe 3s ease-in-out infinite; }
+    @keyframes breathe { 0%,100% { box-shadow: 0 0 20px rgba(123,92,255,0.4); } 50% { box-shadow: 0 0 35px rgba(123,92,255,0.7), 0 0 60px rgba(123,92,255,0.2); } }
+    .brand-info { line-height: 1.2; }
+    .brand-name { font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #a78bfa, var(--p3)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .brand-status { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 4px; }
+    .brand-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse-green 2s ease-in-out infinite; }
+    @keyframes pulse-green { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    .header-center { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .welcome-text { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-style: italic; color: var(--t3); }
+    .welcome-text strong { color: var(--gold); font-style: normal; font-weight: 600; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .btn-header { padding: 6px 16px; border-radius: 50px; border: none; font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; text-decoration: none; }
+    .btn-pro { background: linear-gradient(135deg, var(--gold), #e6a800); color: #1a1000; }
+    .btn-logout { background: rgba(255,75,110,0.1); border: 1px solid rgba(255,75,110,0.25); color: #ff8fab; }
+    .btn-logout:hover { background: rgba(255,75,110,0.2); }
 
-  .chat-messages-scroll::-webkit-scrollbar { width: 4px; }
-  .chat-messages-scroll::-webkit-scrollbar-track { background: transparent; }
-  .chat-messages-scroll::-webkit-scrollbar-thumb { background: rgba(123,92,255,0.2); border-radius: 2px; }
+    .app-body { display: flex; flex: 1; overflow: hidden; position: relative; z-index: 1; }
+    aside { width: 240px; flex-shrink: 0; background: rgba(8,15,34,0.97); border-right: 1px solid rgba(123,92,255,0.1); display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+    .sidebar-section { padding: 20px 12px 8px; }
+    .sidebar-label { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; color: var(--t4); text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: all .2s; color: var(--t3); font-size: 14px; font-weight: 500; border: 1px solid transparent; margin-bottom: 2px; text-decoration: none; user-select: none; }
+    .nav-item:hover { background: rgba(123,92,255,0.08); color: var(--t2); border-color: rgba(123,92,255,0.1); }
+    .nav-item.active { background: rgba(123,92,255,0.15); color: var(--t); border-color: rgba(123,92,255,0.3); box-shadow: 0 0 16px rgba(123,92,255,0.1); }
+    .nav-item .nav-icon { font-size: 16px; flex-shrink: 0; }
+    .nav-arrow { margin-left: auto; font-size: 10px; color: var(--t4); }
+    .sidebar-divider { height: 1px; background: rgba(123,92,255,0.08); margin: 8px 12px; }
+    .sidebar-bottom { margin-top: auto; padding: 12px; border-top: 1px solid rgba(123,92,255,0.08); }
+    .user-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(123,92,255,0.06); border: 1px solid rgba(123,92,255,0.1); }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--p), var(--p2)); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 13px; font-weight: 600; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-plan { font-size: 11px; color: var(--gold); }
 
-  .sidebar::-webkit-scrollbar { width: 3px; }
-  .sidebar::-webkit-scrollbar-track { background: transparent; }
-  .sidebar::-webkit-scrollbar-thumb { background: rgba(123,92,255,0.15); border-radius: 2px; }
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .panel { display: none; flex: 1; overflow: hidden; }
+    .panel.active { display: flex; flex-direction: column; }
+    #panel-chat { flex-direction: row; }
+    .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-header { padding: 16px 24px; border-bottom: 1px solid rgba(123,92,255,0.1); background: rgba(10,22,40,0.6); backdrop-filter: blur(10px); display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+    .chat-header img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(123,92,255,0.4); box-shadow: 0 0 24px rgba(123,92,255,0.35); }
+    .chat-header-info { flex: 1; }
+    .chat-header-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; background: linear-gradient(135deg, #a78bfa, var(--p3)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .chat-header-sub { font-size: 12px; color: var(--t3); }
+    .btn-speak { display: flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 50px; border: 1px solid rgba(123,92,255,0.25); background: rgba(123,92,255,0.08); color: var(--t3); font-family: 'Outfit', sans-serif; font-size: 12px; cursor: pointer; transition: all .2s; }
+    .btn-speak:hover { border-color: var(--p); color: var(--t2); }
+    .btn-speak.speaking { border-color: var(--green); color: var(--green); background: rgba(0,230,118,0.08); animation: speakPulse 1s ease-in-out infinite; }
+    @keyframes speakPulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
 
-  @media (max-width: 768px) {
-    .sidebar { width: 200px !important; }
-    .header-brand { width: 200px !important; }
-    .header-center { display: none !important; }
-  }
-  @media (max-width: 600px) {
-    .sidebar { display: none !important; }
-    .header-brand { width: auto !important; border-right: none !important; }
-  }
-</style>
+    .chat-messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: rgba(123,92,255,0.2); border-radius: 2px; }
+    .msg { display: flex; gap: 10px; animation: msgIn .3s ease; max-width: 80%; }
+    @keyframes msgIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    .msg.bot { align-self: flex-start; }
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover; border: 1.5px solid rgba(123,92,255,0.3); margin-top: 2px; }
+    .msg-bubble { padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.65; }
+    .msg.bot .msg-bubble { background: rgba(26,37,84,0.7); color: var(--t2); border: 1px solid rgba(123,92,255,0.12); border-top-left-radius: 4px; }
+    .msg.user .msg-bubble { background: linear-gradient(135deg, var(--p), var(--p2)); color: #fff; border-top-right-radius: 4px; }
+
+    .msg-img-wrap { margin-top: 8px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, rgba(123,92,255,0.08), rgba(0,230,118,0.04)); border: 1px solid rgba(123,92,255,0.15); }
+    .msg-img-wrap img { width: 100%; display: block; border-radius: 11px; opacity: 0; transition: opacity .5s ease; }
+    .msg-img-wrap img.loaded { opacity: 1; }
+    .msg-img-loader { padding: 30px 20px; text-align: center; color: var(--t3); font-size: 12px; }
+    .msg-img-spinner { width: 26px; height: 26px; border: 3px solid rgba(123,92,255,0.2); border-top-color: var(--p); border-radius: 50%; animation: nxSpin .7s linear infinite; margin: 0 auto 8px; }
+    @keyframes nxSpin { to { transform: rotate(360deg); } }
+
+    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 24px 16px; }
+    .sugg-btn { padding: 8px 16px; border-radius: 50px; border: 1px solid rgba(123,92,255,0.25); background: rgba(123,92,255,0.07); color: var(--t3); font-family: 'Outfit', sans-serif; font-size: 13px; cursor: pointer; transition: all .2s; }
+    .sugg-btn:hover { border-color: var(--p); color: var(--t2); background: rgba(123,92,255,0.14); transform: translateY(-1px); }
+    .nx-dots { display: inline-flex; gap: 4px; align-items: center; }
+    .nx-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--p3); display: inline-block; animation: dotBounce .9s ease-in-out infinite; }
+    .nx-dots i:nth-child(2) { animation-delay: .15s; }
+    .nx-dots i:nth-child(3) { animation-delay: .3s; }
+    @keyframes dotBounce { 0%,60%,100% { transform:translateY(0); } 30% { transform:translateY(-5px); } }
+
+    .chat-input-wrap { padding: 16px 24px; border-top: 1px solid rgba(123,92,255,0.1); background: rgba(10,22,40,0.8); backdrop-filter: blur(10px); display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+    .chat-input { flex: 1; background: rgba(15,28,63,0.7); border: 1px solid rgba(123,92,255,0.2); border-radius: 14px; color: var(--t); font-family: 'Outfit', sans-serif; font-size: 14px; padding: 12px 16px; outline: none; resize: none; transition: border-color .2s; min-height: 46px; max-height: 120px; line-height: 1.5; }
+    .chat-input:focus { border-color: rgba(123,92,255,0.5); }
+    .chat-input::placeholder { color: var(--t4); }
+    .btn-send { width: 44px; height: 44px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--p), var(--p2)); color: #fff; cursor: pointer; transition: all .25s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(123,92,255,0.4); font-size: 16px; }
+    .btn-send:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 32px rgba(123,92,255,0.6); }
+    .btn-send:disabled { opacity: .5; cursor: not-allowed; }
+    .chat-hint { text-align: center; font-size: 11px; color: var(--t4); padding: 6px 0 0; }
+
+    @media (max-width: 768px) {
+      aside { width: 200px; } .header-brand { width: 200px; } .header-center { display: none; }
+      .chat-messages { padding: 16px; } .chat-input-wrap { padding: 12px 16px; } .suggestions { padding: 0 16px 12px; }
+    }
+    @media (max-width: 600px) { aside { display: none; } .header-brand { width: auto; border: none; } }
+  </style>
 </head>
 <body>
 
-<!-- Starfield Canvas -->
-<canvas id="starry-canvas" style="position:fixed;inset:0;z-index:0;pointer-events:none;"></canvas>
+  <canvas id="starry-canvas"></canvas>
+  <audio id="nyxia-audio" src="/NyXiaVoix-RobotParfait1.mp3" preload="auto"></audio>
 
-<!-- App Container -->
-<div id="app" style="position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg1);color:var(--t2);font-family:'Outfit',sans-serif;">
-
-  <!-- ─── HEADER ─────────────────────────────────────────── -->
-  <header style="position:relative;z-index:100;height:56px;background:rgba(8,15,34,0.95);border-bottom:1px solid rgba(123,92,255,0.12);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:space-between;padding:0 20px 0 0;flex-shrink:0;">
-    <!-- Brand -->
-    <div class="header-brand" style="width:240px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 16px;border-right:1px solid rgba(123,92,255,0.1);height:100%;">
-      <img src="NyXia.png" alt="NyXia" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(123,92,255,0.5);box-shadow:0 0 20px rgba(123,92,255,0.4);animation:breathe 3s ease-in-out infinite;">
-      <div style="line-height:1.2;">
-        <div style="font-size:15px;font-weight:700;background:linear-gradient(135deg,#a78bfa,#4FA3FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">NyXia IA</div>
-        <div style="font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px;">
-          <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse-green 2s ease-in-out infinite;"></span>
-          En ligne
-        </div>
+  <header>
+    <div class="header-brand">
+      <img src="/NyXia.png" alt="NyXia">
+      <div class="brand-info">
+        <div class="brand-name">NyXia IA</div>
+        <div class="brand-status">En ligne</div>
       </div>
     </div>
-
-    <!-- Center — Welcome -->
-    <div class="header-center" style="flex:1;display:flex;align-items:center;justify-content:center;">
-      <div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic;color:var(--t3);">
-        Bienvenue dans mon univers ✦ <strong style="color:var(--gold);font-style:normal;font-weight:600;" id="header-username">Praticienne</strong>
-      </div>
+    <div class="header-center">
+      <div class="welcome-text">Bienvenue dans mon univers ✦ <strong id="header-username"></strong></div>
     </div>
-
-    <!-- Right actions -->
-    <div style="display:flex;align-items:center;gap:10px;">
-      <a href="https://nyxiapublicationweb.com" target="_blank" rel="noopener noreferrer" id="gold-btn" style="padding:6px 16px;border-radius:50px;background:linear-gradient(135deg,var(--gold),#e6a800);color:#1a1000;font-size:12px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;text-decoration:none;transition:all .2s;">⭐ Le Miroir des Aidantes</a>
-      <button id="logout-btn" style="padding:6px 16px;border-radius:50px;border:1px solid rgba(255,75,110,0.25);background:rgba(255,75,110,0.1);color:#ff8fab;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;">Déconnexion</button>
+    <div class="header-actions">
+      <span class="btn-header btn-pro">⭐ Miroir des Aidantes</span>
+      <button class="btn-header btn-logout" onclick="logout()">Déconnexion</button>
     </div>
   </header>
 
-  <!-- ─── BODY ───────────────────────────────────────────── -->
-  <div style="display:flex;flex:1;overflow:hidden;position:relative;z-index:1;">
-
-    <!-- ─── SIDEBAR ─────────────────────────────────────── -->
-    <aside class="sidebar" style="width:240px;flex-shrink:0;background:rgba(8,15,34,0.97);border-right:1px solid rgba(123,92,255,0.1);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;">
-      <!-- Navigation section -->
-      <div style="padding:20px 12px 8px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--t4);text-transform:uppercase;padding:0 8px;margin-bottom:6px;">Navigation</div>
-        <a href="#" class="nav-item" data-panel="chat" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:all .2s;color:#fff;font-size:14px;font-weight:500;border:1px solid rgba(123,92,255,0.3);margin-bottom:2px;text-decoration:none;user-select:none;background:rgba(123,92,255,0.15);box-shadow:0 0 16px rgba(123,92,255,0.1);opacity:1;">
-          <span style="font-size:16px;flex-shrink:0;">💬</span>
-          <span>Chat avec NyXia</span>
-          <span style="margin-left:auto;font-size:10px;color:var(--t4);">›</span>
-        </a>
-        
-        
+  <div class="app-body">
+    <aside>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Navigation</div>
+        <div class="nav-item active" id="nav-chat" onclick="showPanel('chat')">
+          <span class="nav-icon">💬</span> Chat avec NyXia <span class="nav-arrow">›</span>
+        </div>
       </div>
-
-      <!-- Divider -->
-      <div style="height:1px;background:rgba(123,92,255,0.08);margin:8px 12px;"></div>
-
-      <!-- Menu section -->
-      <div style="padding:8px 12px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--t4);text-transform:uppercase;padding:0 8px;margin-bottom:6px;">Menu</div>
-        <a href="https://www.lemiroirnyxia.com/fr/login" target="_blank" class="nav-item" data-panel="miroir" data-disabled="true" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:default;transition:all .2s;color:var(--t3);font-size:14px;font-weight:500;border:1px solid transparent;margin-bottom:2px;text-decoration:none;user-select:none;background:transparent;box-shadow:none;opacity:0.6;">
-          <span style="font-size:16px;flex-shrink:0;">🪞</span>
-          <span>Miroir du Praticien™</span>
-        </a>
-		
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Menu</div>
+        <div class="nav-item active" id="nav-miroir">
+          <span class="nav-icon">🪞</span> Miroir du Praticien™
+        </div>
       </div>
-
-      <!-- Bottom user card -->
-      <div style="margin-top:auto;padding:12px;border-top:1px solid rgba(123,92,255,0.08);">
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:rgba(123,92,255,0.06);border:1px solid rgba(123,92,255,0.1);">
-          <div id="user-avatar" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--p2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">?</div>
-          <div style="flex:1;min-width:0;">
-            <div id="sidebar-username" style="font-size:13px;font-weight:600;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Praticienne</div>
-            <div style="font-size:11px;color:var(--gold);">✦ Plan Miroir des Aidantes</div>
+      <div class="sidebar-bottom">
+        <div class="user-card">
+          <div class="user-avatar" id="sidebar-avatar">D</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebar-username">Chargement...</div>
+            <div class="user-plan">✦ Plan Miroir des Aidantes</div>
           </div>
         </div>
       </div>
     </aside>
 
-    <!-- ─── MAIN CONTENT ─────────────────────────────────── -->
-    <main style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;">
-
-      <!-- Chat Panel -->
-      <div id="panel-chat" style="display:flex;flex-direction:row;flex:1;overflow:hidden;">
-        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-          <!-- Chat header -->
-          <div style="padding:16px 24px;border-bottom:1px solid rgba(123,92,255,0.1);background:rgba(10,22,40,0.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;flex-shrink:0;">
-            <img src="NyXia.png" alt="NyXia" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(123,92,255,0.4);box-shadow:0 0 24px rgba(123,92,255,0.35);">
-            <div style="flex:1;">
-              <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;background:linear-gradient(135deg,#a78bfa,#4FA3FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">NyXia IA</div>
-              <div style="font-size:12px;color:var(--t3);">Ton accompagnatrice réflexive · Miroir du Praticien™</div>
+    <div class="main-content">
+      <div class="panel active" id="panel-chat">
+        <div class="chat-area">
+          <div class="chat-header">
+            <img src="/NyXia.png" alt="NyXia">
+            <div class="chat-header-info">
+              <div class="chat-header-name">NyXia IA</div>
+              <div class="chat-header-sub">Ton accompagnatrice réflexive · Miroir du Praticien™</div>
             </div>
-            <button id="global-speak-btn" style="display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:50px;border:1px solid rgba(123,92,255,0.25);background:rgba(123,92,255,0.08);color:var(--t3);font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;">🔊 Écouter NyXia</button>
+            <button class="btn-speak" id="btn-speak" onclick="toggleSpeak()">🔊 Écouter NyXia</button>
           </div>
-
-          <!-- Messages -->
-          <div id="messages-area" class="chat-messages-scroll" style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth;">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="suggestions" id="suggestions">
+            <button class="sugg-btn" onclick="sendSuggestion(&quot;J'ai besoin de prendre du recul&quot;)">🪞 J'ai besoin de prendre du recul</button>
+            <button class="sugg-btn" onclick="sendSuggestion(&quot;Je me sens surchargée&quot;)">🌙 Je me sens surchargée</button>
+            <button class="sugg-btn" onclick="sendSuggestion(&quot;Aide-moi à identifier ce que je porte&quot;)">💜 Aide-moi à identifier ce que je porte</button>
+            <button class="sugg-btn" onclick="sendSuggestion(&quot;Je veux un espace de calme&quot;)">🕯️ Je veux un espace de calme</button>
           </div>
-
-          <!-- Typing indicator (hidden by default) -->
-          <div id="typing-indicator" style="display:none;padding:0 24px 16px;">
-            <div style="display:flex;gap:10px;align-self:flex-start;max-width:80%;animation:msgIn .3s ease;">
-              <img src="NyXia.png" alt="NyXia" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;object-fit:cover;border:1.5px solid rgba(123,92,255,0.3);margin-top:2px;">
-              <div style="padding:12px 16px;border-radius:16px;font-size:14px;background:rgba(26,37,84,0.7);color:var(--t2);border:1px solid rgba(123,92,255,0.12);border-top-left-radius:4px;display:flex;align-items:center;gap:4px;">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--p3);display:inline-block;animation:dotBounce .9s ease-in-out infinite;"></span>
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--p3);display:inline-block;animation:dotBounce .9s ease-in-out infinite .15s;"></span>
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--p3);display:inline-block;animation:dotBounce .9s ease-in-out infinite .3s;"></span>
-              </div>
-            </div>
+          <div id="attach-bar" style="display:none;padding:6px 20px;background:rgba(123,92,255,0.08);border-top:1px solid rgba(123,92,255,0.1);align-items:center;gap:8px;flex-shrink:0;font-size:12px;color:var(--t3)">
+            <span id="attach-name"></span>
+            <button id="btn-clear-attach" style="background:none;border:none;color:var(--t4);cursor:pointer;font-size:14px">✕</button>
           </div>
-
-          <!-- Suggestions -->
-          <div id="suggestions-area" style="display:flex;flex-wrap:wrap;gap:8px;padding:0 24px 16px;">
-            <button class="suggestion-btn" data-text="J'ai besoin de prendre du recul" style="padding:8px 16px;border-radius:50px;border:1px solid rgba(123,92,255,0.25);background:rgba(123,92,255,0.07);color:var(--t3);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;">🪞 J'ai besoin de prendre du recul</button>
-            <button class="suggestion-btn" data-text="Je me sens surchargée" style="padding:8px 16px;border-radius:50px;border:1px solid rgba(123,92,255,0.25);background:rgba(123,92,255,0.07);color:var(--t3);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;">💫 Je me sens surchargée</button>
-            <button class="suggestion-btn" data-text="Aide-moi à clarifier mes besoins" style="padding:8px 16px;border-radius:50px;border:1px solid rgba(123,92,255,0.25);background:rgba(123,92,255,0.07);color:var(--t3);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;">🌟 Aide-moi à clarifier mes besoins</button>
-            <button class="suggestion-btn" data-text="Retrouver mon centre" style="padding:8px 16px;border-radius:50px;border:1px solid rgba(123,92,255,0.25);background:rgba(123,92,255,0.07);color:var(--t3);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;">✦ Retrouver mon centre</button>
+          <div class="chat-input-wrap">
+            <label title="PDF, image ou ZIP" style="flex-shrink:0;width:36px;height:36px;border-radius:9px;border:1px solid rgba(123,92,255,0.2);background:rgba(123,92,255,0.06);color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px">
+              📎<input type="file" id="chat-file" accept=".pdf,.zip,image/*" style="display:none">
+            </label>
+            <textarea class="chat-input" id="chat-input" placeholder="Partage ce qui te traverse l'esprit..." rows="1"></textarea>
+            <button class="btn-send" id="btn-send" onclick="sendMessage()">➤</button>
           </div>
-
-          <!-- Input area -->
-          <div style="padding:16px 24px;border-top:1px solid rgba(123,92,255,0.1);background:rgba(10,22,40,0.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;gap:10px;align-items:flex-end;flex-shrink:0;">
-            <textarea id="chat-input" rows="1" placeholder="Partage ce qui te traverse l'esprit…" style="flex:1;background:rgba(15,28,63,0.7);border:1px solid rgba(123,92,255,0.2);border-radius:14px;color:var(--t);font-family:'Outfit',sans-serif;font-size:14px;padding:12px 16px;outline:none;resize:none;transition:border-color .2s;min-height:46px;max-height:120px;line-height:1.5;"></textarea>
-            <button id="send-btn" style="width:44px;height:44px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;cursor:pointer;transition:all .25s;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(123,92,255,0.4);font-size:16px;opacity:0.5;">➤</button>
-          </div>
-          <div style="text-align:center;font-size:11px;color:var(--t4);padding:6px 0 0;">Entrée pour envoyer · Shift+Entrée pour un retour à la ligne</div>
+          <div class="chat-hint">Entrée pour envoyer · Shift+Entrée pour un retour à la ligne</div>
         </div>
       </div>
-
-      <!-- Coming Soon Panels -->
-      <div id="panel-miroir" style="display:none;flex-direction:column;flex:1;overflow:hidden;align-items:center;justify-content:center;">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:60px 40px;">
-          <div style="font-size:64px;margin-bottom:20px;">🪞</div>
-          <h2 style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0 0 10px 0;">Miroir du Praticien</h2>
-          <p style="color:var(--t3);font-size:15px;max-width:400px;line-height:1.7;margin:0;">Le Miroir du Praticien™ arrive bientôt. Un espace dédié à l'auto-observation et à la conscience de soi pour les praticiennes et accompagnantes.</p>
-        </div>
-      </div>
-
-      <div id="panel-neuro" style="display:none;flex-direction:column;flex:1;overflow:hidden;align-items:center;justify-content:center;">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:60px 40px;">
-          <div style="font-size:64px;margin-bottom:20px;">✨</div>
-          <h2 style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0 0 10px 0;">Neuro-Alchimie</h2>
-          <p style="color:var(--t3);font-size:15px;max-width:400px;line-height:1.7;margin:0;">Les exercices de Neuro-Alchimie inspirés de la Méthode A.M.I.E. arrivent bientôt. Un espace de transformation intérieure et de reconnexion avec tes besoins profonds.</p>
-        </div>
-      </div>
-
-      <div id="panel-projets" style="display:none;flex-direction:column;flex:1;overflow:hidden;align-items:center;justify-content:center;">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:60px 40px;">
-          <div style="font-size:64px;margin-bottom:20px;">📁</div>
-          <h2 style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0 0 10px 0;">Projets</h2>
-          <p style="color:var(--t3);font-size:15px;max-width:400px;line-height:1.7;margin:0;">Ton espace projets arrive bientôt. Un lieu pour organiser et retrouver tes réflexions et travaux avec NyXia.</p>
-        </div>
-      </div>
-
-      <div id="panel-messagerie" style="display:none;flex-direction:column;flex:1;overflow:hidden;align-items:center;justify-content:center;">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:60px 40px;">
-          <div style="font-size:64px;margin-bottom:20px;">✉️</div>
-          <h2 style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0 0 10px 0;">Messagerie</h2>
-          <p style="color:var(--t3);font-size:15px;max-width:400px;line-height:1.7;margin:0;">La messagerie arrive bientôt. Un espace pour échanger en toute confidentialité.</p>
-        </div>
-      </div>
-
-    </main>
+    </div>
   </div>
-</div>
 
-<script>
-(function() {
-  'use strict';
+  <script src="/js/starry-bg.js" defer></script>
 
-  // ─── State ──────────────────────────────────────────────
-  let messages = [];
-  let chatHistory = [];
-  let isTyping = false;
-  let isSpeakingGlobal = false;
-  let speakingMsgId = null;
-  let copiedMsgId = null;
-  let showSuggestions = true;
-  let userName = '';
-  let activePanel = 'chat';
-
-  // Load session from localStorage
-  try {
-    const saved = localStorage.getItem('nyxia_session');
-    if (saved) {
-      const data = JSON.parse(saved);
-      userName = data.userName || '';
-      messages = data.messages || [];
-      chatHistory = data.chatHistory || [];
+  <script>
+    /* ═══════ CONFIG VOIX ═══════ */
+    var NYXIA_VOICE_PRIORITY = ['Microsoft Denise','Microsoft Hortense','Google français','Amélie','Audrey','Virginie','Sophie','Marie','Alice'];
+    var _cachedVoices = null;
+    function pickBestFrenchVoice(voices) {
+      if (!voices || !voices.length) voices = window.speechSynthesis.getVoices();
+      if (!voices || !voices.length) return _cachedVoices;
+      for (var i = 0; i < NYXIA_VOICE_PRIORITY.length; i++) {
+        var found = voices.find(function(v) { return v.name.indexOf(NYXIA_VOICE_PRIORITY[i]) !== -1 && v.lang.indexOf('fr') === 0 })
+        if (found) { _cachedVoices = found; console.log('🔊 Voix NyXia:', found.name); return found; }
+      }
+      var feminine = voices.find(function(v) { return v.lang === 'fr-FR' && /female|femme|amelie|audrey|marie|virginie|sophie|alice|denise|helene|isabelle|celine|julie|leila/i.test(v.name) })
+      if (feminine) { _cachedVoices = feminine; console.log('🔊 Voix fallback:', feminine.name); return feminine; }
+      var any = voices.find(function(v) { return v.lang === 'fr-FR' }) || voices.find(function(v) { return v.lang && v.lang.indexOf('fr') === 0 }) || null;
+      if (any) { _cachedVoices = any; console.log('🔊 Voix générique:', any.name); }
+      return any;
     }
-  } catch(e) {}
 
-  // ─── DOM refs ────────────────────────────────────────────
-  const messagesArea = document.getElementById('messages-area');
-  const chatInput = document.getElementById('chat-input');
-  const sendBtn = document.getElementById('send-btn');
-  const typingIndicator = document.getElementById('typing-indicator');
-  const suggestionsArea = document.getElementById('suggestions-area');
-  const globalSpeakBtn = document.getElementById('global-speak-btn');
-  const headerUsername = document.getElementById('header-username');
-  const sidebarUsername = document.getElementById('sidebar-username');
-  const userAvatar = document.getElementById('user-avatar');
-  const goldBtn = document.getElementById('gold-btn');
-  const logoutBtn = document.getElementById('logout-btn');
+    /* ═══════ AUTH ═══════ */
+    var sessionToken = sessionStorage.getItem('nyxia_token') || ''
+    var clientEmail  = '', clientName = ''
+    ;(function checkAuth() {
+      if (!sessionToken) { window.location.href = '/login.html'; return }
+      fetch('/api/check-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: sessionToken }) })
+      .then(r => r.json()).then(data => {
+        if (!data.valid) { window.location.href = '/login.html'; return }
+        clientEmail = data.email || ''
+        clientName = localStorage.getItem('nyxia_username') || ''
+        initUI()
+      }).catch(() => { window.location.href = '/login.html' })
+    })()
 
-  // ─── Simulated AI Responses ─────────────────────────────
-  const SIMULATED_RESPONSES = [
-    "Je t'entends 💜 Prends le temps de respirer profondément.\n\nQu'est-ce qui te fait ressentir cela en ce moment ?",
-    "Merci de partager ça avec moi. C'est important d'honorer ce que tu ressens.\n\nEst-ce que tu pourrais me dire ce qui te préoccupe le plus en ce moment ?",
-    "Je sens que c'est un moment important pour toi ✦\n\nRappelle-toi que tu n'as pas besoin d'avoir toutes les réponses maintenant. L'important c'est d'être présente à toi-même.\n\nQu'est-ce dont tu aurais besoin pour te sentir plus en paix ?",
-    "Tu es en train de traverser quelque chose de significatif 💜\n\nAvant d'aller plus loin, prends une grande inspiration... et souffle doucement.\n\nJe suis là pour t'accompagner. Dis-moi ce qui résonne le plus en toi en ce moment.",
-    "Ce que tu partages est précieux ✦\n\nEn tant que praticienne, tu donnes tant aux autres. Il est essentiel de te reconnecter à tes propres besoins.\n\nComment te sens-tu dans ton corps en ce moment ?",
-    "Je comprends 💜 C'est tout à fait normal de ressentir ça.\n\nLa conscience de soi est le premier pas vers la transformation. En étant attentive à ce qui se passe en toi, tu ouvres la porte à un changement profond.\n\nQu'est-ce qui t'inspire le plus en ce moment ?",
-    "Merci de ta confiance ✦\n\nTu sais, chaque moment de doute est aussi une opportunité de grandir et de mieux te connaître.\n\nQu'est-ce que ton intuition te murmure en ce moment ?",
-    "Je suis là avec toi 💜\n\nParfois, le simple fait de mettre des mots sur ce qu'on ressent peut déjà apporter un soulagement.\n\nEst-ce qu'il y a quelque chose que tu n'oses pas te dire à voix haute ?"
-  ];
-
-  function getSimulatedResponse(userText) {
-    const lower = userText.toLowerCase();
-    if (lower.includes('recul') || lower.includes('distance') || lower.includes('pas')) {
-      return "Prendre du recul est une sagesse 💜\n\nEssaie cet exercice simple :\n\n1. Ferme les yeux quelques secondes\n2. Inspire profondément par le nez (4 secondes)\n3. Retiens ton souffle (4 secondes)\n4. Expire lentement par la bouche (6 secondes)\n\nReviens vers moi quand tu es prête ✦ Comment te sens-tu maintenant ?";
+    function initUI() {
+      var audio = document.getElementById('nyxia-audio')
+      if (audio) { audio.volume = 0.7; audio.play().catch(function(){}) }
+      document.getElementById('header-username').textContent = clientName
+      document.getElementById('sidebar-username').textContent = clientName
+      document.getElementById('sidebar-avatar').textContent = clientName.charAt(0).toUpperCase()
+      sendWelcome()
     }
-    if (lower.includes('surcharg') || lower.includes('fatigu') || lower.includes('épuis') || lower.includes('stress')) {
-      return "Je t'entends du fond du cœur 💜\n\nQuand on se sent surchargée, c'est le signal que notre être a besoin d'attention.\n\n**Trois choses à te rappeler maintenant :**\n\n• Tu as le droit de ralentir\n• Tu as le droit de dire non\n• Tu as le droit de prendre soin de toi d'abord\n\nQuel est le premier petit geste que tu pourrais faire pour toi aujourd'hui ? ✦";
-    }
-    if (lower.includes('besoin') || lower.includes('clarifi') || lower.includes('confus')) {
-      return "Clarifier ses besoins est un acte de profond respect de soi ✦\n\nEssayons ensemble. Réponds simplement et honnêtement :\n\n- **Qu'est-ce qui te manque le plus en ce moment ?**\n- **Qu'est-ce qui te fait sentir vivante et alignée ?**\n- **Si tu n'avais aucune contrainte, que ferais-tu aujourd'hui ?**\n\nPrends ton temps. Il n'y a pas de bonne ou mauvaise réponse 💜";
-    }
-    if (lower.includes('centre') || lower.includes('perdue') || lower.includes('égar') || lower.includes('ancrage')) {
-      return "Retrouver son centre, c'est revenir à soi 💜\n\nVoici un exercice de recentrage rapide :\n\n**L'ancrage en 3 étapes :**\n\n1. **Regarde** — Nomme 5 choses que tu vois autour de toi\n2. **Touche** — Sens 4 choses que tu peux toucher\n3. **Écoute** — Identifie 3 sons que tu entends\n\nCet exercice ramène ton esprit dans le présent. Ton centre est toujours là, il t'attend ✦";
-    }
-    // Random response
-    return SIMULATED_RESPONSES[Math.floor(Math.random() * SIMULATED_RESPONSES.length)];
-  }
 
-  // ─── Utility ─────────────────────────────────────────────
-  function generateId() {
-    return 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-  }
+    function logout() {
+      fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: sessionToken }) })
+      .finally(() => { sessionStorage.removeItem('nyxia_token'); localStorage.removeItem('nyxia_username'); window.location.href = '/login.html' })
+    }
 
-  function stripMarkdown(text) {
-    return text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\n/g, ' ');
-  }
+    /* ═══════ NAVIGATION ═══════ */
+    function showPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+      var panelEl = document.getElementById('panel-' + name)
+      if (panelEl) panelEl.classList.add('active')
+      var navEl = document.getElementById('nav-' + name)
+      if (navEl) navEl.classList.add('active')
+    }
 
-  function renderContent(text) {
-    const parts = text.split(/(\*\*.*?\*\*)/g);
-    let html = '';
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      if (part.startsWith('**') && part.endsWith('**')) {
-        html += '<strong style="font-weight:700;">' + part.slice(2, -2) + '</strong>';
-      } else {
-        const lines = part.split('\n');
-        for (let j = 0; j < lines.length; j++) {
-          if (j > 0) html += '<br>';
-          html += lines[j];
+    /* ═══════ CHAT ═══════ */
+    var chatHistory = [], isSpeaking = false, _currentAttachment = null, _currentAgent = 'nyxia'
+
+    function sendWelcome() {
+      var welcome = clientName
+        ? 'Bienvenue dans mon univers ✦\n\nSalut **' + clientName + '** 💜\n\nJe suis NyXia, ton accompagnatrice réflexive.\n\nQu\'est-ce qui te pèse le plus en ce moment ?'
+        : 'Bienvenue dans mon univers ✦\n\nJe suis **NyXia**, ton accompagnatrice réflexive 💜\n\nAvant tout — comment tu t\'appelles ?'
+      addBotMessage(welcome)
+    }
+
+    function sendSuggestion(text) {
+      document.getElementById('suggestions').style.display = 'none'
+      sendMessageText(text)
+    }
+
+    function sendMessage() {
+      var input = document.getElementById('chat-input')
+      var text = input.value.trim()
+      if (!text && !_currentAttachment) return
+      input.value = ''; input.style.height = 'auto'
+      document.getElementById('suggestions').style.display = 'none'
+      sendMessageText(text || '📎 Fichier joint')
+    }
+
+    function sendMessageText(text) {
+      if (!clientName) {
+        var lastMsg = document.querySelector('#chat-messages .msg.bot:last-child .msg-bubble')
+        if (lastMsg && (lastMsg.textContent.includes('appelles') || lastMsg.textContent.includes('prénom'))) {
+          var name = text.trim().split(' ')[0]
+          clientName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+          localStorage.setItem('nyxia_username', clientName)
+          document.getElementById('header-username').textContent = clientName
+          document.getElementById('sidebar-username').textContent = clientName
+          document.getElementById('sidebar-avatar').textContent = clientName.charAt(0).toUpperCase()
         }
       }
-    }
-    return html;
-  }
-
-  function saveSession() {
-    try {
-      localStorage.setItem('nyxia_session', JSON.stringify({
-        userName: userName,
-        messages: messages,
-        chatHistory: chatHistory
-      }));
-    } catch(e) {}
-  }
-
-  function scrollToBottom() {
-    requestAnimationFrame(function() {
-      messagesArea.scrollTop = messagesArea.scrollHeight;
-    });
-  }
-
-  // ─── Render Messages ─────────────────────────────────────
-  function renderMessages() {
-    messagesArea.innerHTML = '';
-    messages.forEach(function(msg) {
-      renderSingleMessage(msg);
-    });
-    scrollToBottom();
-  }
-
-  function renderSingleMessage(msg) {
-    const isBot = msg.role === 'assistant';
-    const wrapper = document.createElement('div');
-    wrapper.setAttribute('data-msg-id', msg.id);
-    wrapper.style.cssText = 'display:flex;gap:10px;align-self:' + (isBot ? 'flex-start' : 'flex-end') + ';flex-direction:' + (isBot ? 'row' : 'row-reverse') + ';max-width:80%;animation:msgIn .3s ease;';
-
-    if (isBot) {
-      const avatar = document.createElement('img');
-      avatar.src = 'NyXia.png';
-      avatar.alt = 'NyXia';
-      avatar.style.cssText = 'width:32px;height:32px;border-radius:50%;flex-shrink:0;object-fit:cover;border:1.5px solid rgba(123,92,255,0.3);margin-top:2px;';
-      wrapper.appendChild(avatar);
-    }
-
-    const col = document.createElement('div');
-    col.style.cssText = 'display:flex;flex-direction:column;gap:4px;max-width:100%;';
-
-    const bubble = document.createElement('div');
-    bubble.style.cssText = 'padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.65;' +
-      (isBot
-        ? 'background:rgba(26,37,84,0.7);color:var(--t2);border:1px solid rgba(123,92,255,0.12);border-top-left-radius:4px;'
-        : 'background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border-top-right-radius:4px;');
-    bubble.innerHTML = isBot ? renderContent(msg.content) : msg.content;
-    col.appendChild(bubble);
-
-    // Action buttons for bot messages
-    if (isBot) {
-      const actions = document.createElement('div');
-      actions.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;';
-
-      const listenBtn = document.createElement('button');
-      listenBtn.className = 'listen-btn';
-      listenBtn.setAttribute('data-msg-id', msg.id);
-      listenBtn.style.cssText = 'padding:2px 9px;border-radius:50px;border:1px solid rgba(123,92,255,0.15);background:rgba(123,92,255,0.04);color:var(--t4);font-family:"Outfit",sans-serif;font-size:11px;cursor:pointer;transition:all .15s;';
-      listenBtn.textContent = '🔊 Écouter';
-      listenBtn.addEventListener('click', function() {
-        toggleSpeakMessage(msg.id, msg.content);
-      });
-
-      const copyBtn = document.createElement('button');
-      copyBtn.className = 'copy-btn';
-      copyBtn.setAttribute('data-msg-id', msg.id);
-      copyBtn.style.cssText = 'padding:2px 9px;border-radius:50px;border:1px solid rgba(123,92,255,0.15);background:rgba(123,92,255,0.04);color:var(--t4);font-family:"Outfit",sans-serif;font-size:11px;cursor:pointer;transition:all .15s;';
-      copyBtn.textContent = '📋 Copier';
-      copyBtn.addEventListener('click', function() {
-        copyMessage(msg.id, msg.content);
-      });
-
-      actions.appendChild(listenBtn);
-      actions.appendChild(copyBtn);
-      col.appendChild(actions);
-    }
-
-    wrapper.appendChild(col);
-    messagesArea.appendChild(wrapper);
-  }
-
-  // ─── TTS ─────────────────────────────────────────────────
-  const VOICE_PRIORITY = [
-    'Microsoft Denise', 'Microsoft Hortense', 'Google français',
-    'Amélie', 'Audrey', 'Virginie', 'Sophie', 'Marie', 'Alice',
-  ];
-
-  function pickBestFrenchVoice() {
-    if (!window.speechSynthesis) return null;
-    const voices = window.speechSynthesis.getVoices();
-    if (!voices.length) return null;
-    for (const name of VOICE_PRIORITY) {
-      const found = voices.find(function(v) { return v.name.indexOf(name) !== -1 && v.lang.indexOf('fr') === 0; });
-      if (found) return found;
-    }
-    const feminine = voices.find(function(v) {
-      return v.lang === 'fr-FR' && /female|femme|amelie|audrey|marie|virginie|sophie|alice|denise|helene|isabelle|celine|julie|leila/i.test(v.name);
-    });
-    if (feminine) return feminine;
-    return voices.find(function(v) { return v.lang === 'fr-FR'; }) ||
-           voices.find(function(v) { return v.lang && v.lang.indexOf('fr') === 0; }) ||
-           null;
-  }
-
-  function speakMessage(msgId, text) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    speakingMsgId = msgId;
-
-    // Update all listen buttons
-    updateListenButtons();
-
-    const utterance = new SpeechSynthesisUtterance(stripMarkdown(text));
-    const voice = pickBestFrenchVoice();
-    if (voice) utterance.voice = voice;
-    utterance.lang = 'fr-FR';
-    utterance.rate = 0.95;
-    utterance.pitch = 1.1;
-
-    utterance.onend = function() {
-      speakingMsgId = null;
-      updateListenButtons();
-    };
-    utterance.onerror = function() {
-      speakingMsgId = null;
-      updateListenButtons();
-    };
-    window.speechSynthesis.speak(utterance);
-  }
-
-  function stopSpeaking() {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    speakingMsgId = null;
-    isSpeakingGlobal = false;
-    updateGlobalSpeakBtn();
-    updateListenButtons();
-  }
-
-  function toggleSpeakMessage(msgId, text) {
-    if (speakingMsgId === msgId) {
-      stopSpeaking();
-    } else {
-      speakMessage(msgId, text);
-    }
-  }
-
-  function updateListenButtons() {
-    document.querySelectorAll('.listen-btn').forEach(function(btn) {
-      const id = btn.getAttribute('data-msg-id');
-      if (speakingMsgId === id) {
-        btn.textContent = '⏸ Pause';
-        btn.style.background = 'rgba(0,230,118,0.08)';
-        btn.style.color = 'var(--green)';
-      } else {
-        btn.textContent = '🔊 Écouter';
-        btn.style.background = 'rgba(123,92,255,0.04)';
-        btn.style.color = 'var(--t4)';
+      var attachmentToSend = _currentAttachment ? JSON.parse(JSON.stringify(_currentAttachment)) : null
+      var displayText = text
+      if (attachmentToSend) { displayText = text ? text + '\n📎 ' + attachmentToSend.name : '📎 ' + attachmentToSend.name }
+      addUserMessage(displayText)
+      var historyContent = text
+      if (attachmentToSend) { historyContent = (text ? text + '\n' : '') + '[Fichier joint: ' + attachmentToSend.name + ' (' + attachmentToSend.type + ')]' }
+      chatHistory.push({ role: 'user', content: historyContent })
+      if (_currentAttachment) {
+        _currentAttachment = null
+        var bar = document.getElementById('attach-bar'), fi = document.getElementById('chat-file')
+        if (bar) bar.style.display = 'none'; if (fi) fi.value = ''
       }
-    });
-  }
-
-  function updateGlobalSpeakBtn() {
-    if (isSpeakingGlobal) {
-      globalSpeakBtn.style.borderColor = 'var(--green)';
-      globalSpeakBtn.style.background = 'rgba(0,230,118,0.08)';
-      globalSpeakBtn.style.color = 'var(--green)';
-      globalSpeakBtn.style.animation = 'speakPulse 1s ease-in-out infinite';
-    } else {
-      globalSpeakBtn.style.borderColor = 'rgba(123,92,255,0.25)';
-      globalSpeakBtn.style.background = 'rgba(123,92,255,0.08)';
-      globalSpeakBtn.style.color = 'var(--t3)';
-      globalSpeakBtn.style.animation = 'none';
+      var btn = document.getElementById('btn-send')
+      btn.disabled = true
+      addTyping()
+      fetch('/api/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: chatHistory.slice(-10), userName: clientName, agent: _currentAgent, attachment: attachmentToSend })
+      })
+      .then(r => r.json())
+      .then(data => {
+        removeTyping()
+        var reply = data.content || 'Erreur inattendue — réessaie dans un instant 💜'
+        addBotMessage(reply)
+        chatHistory.push({ role: 'assistant', content: reply })
+        if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20)
+        if (isSpeaking) speakText(reply)
+        btn.disabled = false
+      })
+      .catch(() => { removeTyping(); addBotMessage('Petite interruption... réessaie dans un instant 💜'); btn.disabled = false })
     }
-  }
 
-  // ─── Copy ────────────────────────────────────────────────
-  function copyMessage(msgId, text) {
-    navigator.clipboard.writeText(text).then(function() {
-      copiedMsgId = msgId;
-      document.querySelectorAll('.copy-btn').forEach(function(btn) {
-        if (btn.getAttribute('data-msg-id') === msgId) {
-          btn.textContent = '✓';
-          btn.style.color = 'var(--green)';
+    /* ═══════ MESSAGES & IMAGES ═══════ */
+    function addBotMessage(text) {
+      var msgs = document.getElementById('chat-messages')
+      var div = document.createElement('div'); div.className = 'msg bot'
+      var avatar = document.createElement('img'); avatar.src = '/NyXia.png'; avatar.className = 'msg-avatar'; avatar.alt = 'NyXia'
+      var wrapper = document.createElement('div'); wrapper.style.cssText = 'display:flex;flex-direction:column;gap:4px;max-width:100%'
+
+      var imgRegex = /\[IMAGE\s*:\s*([\s\S]*?)\]/i
+      var imgMatch = text.match(imgRegex)
+      var textWithoutImg = text.replace(imgRegex, '').trim()
+      var imgDesc = imgMatch ? imgMatch[1].trim() : null
+
+      var bubble = document.createElement('div'); bubble.className = 'msg-bubble'
+      if (textWithoutImg) {
+        bubble.innerHTML = escHtml(textWithoutImg).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
+      } else if (!imgDesc) {
+        bubble.innerHTML = escHtml(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
+      }
+      wrapper.appendChild(bubble)
+
+      if (imgDesc) {
+        var imgWrap = document.createElement('div'); imgWrap.className = 'msg-img-wrap'
+        var loader = document.createElement('div'); loader.className = 'msg-img-loader'
+        loader.innerHTML = '<div class="msg-img-spinner"></div>🎨 Génération en cours...'
+        imgWrap.appendChild(loader); wrapper.appendChild(imgWrap)
+
+        var cleanDesc = imgDesc.replace(/\n/g, ' ').substring(0, 300).trim()
+        var seed = Math.floor(Math.random() * 999999)
+        var primaryUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanDesc + ', high quality') + '?width=512&height=512&nologo=true&model=flux&seed=' + seed
+
+        var img = document.createElement('img'); img.alt = cleanDesc; img.crossOrigin = 'anonymous'
+        var hasRetried = false
+
+        img.onload = function() {
+          loader.remove()
+          imgWrap.style.background = 'none'; imgWrap.style.border = 'none'
+          imgWrap.appendChild(img)
+          requestAnimationFrame(function() { img.classList.add('loaded') })
+          msgs.scrollTop = msgs.scrollHeight
         }
-      });
-      setTimeout(function() {
-        copiedMsgId = null;
-        document.querySelectorAll('.copy-btn').forEach(function(btn) {
-          btn.textContent = '📋 Copier';
-          btn.style.color = 'var(--t4)';
-        });
-      }, 2000);
-    });
-  }
 
-  // ─── Send Message ───────────────────────────────────────
-  function sendMessage(text) {
-    if (!text.trim() || isTyping) return;
-    showSuggestions = false;
-    suggestionsArea.style.display = 'none';
-
-    const userMsg = { id: generateId(), role: 'user', content: text };
-    messages.push(userMsg);
-    chatHistory.push({ role: 'user', content: text });
-
-    // Render user message
-    renderSingleMessage(userMsg);
-    scrollToBottom();
-
-    // Show typing indicator
-    isTyping = true;
-    typingIndicator.style.display = 'block';
-    scrollToBottom();
-    updateSendBtn();
-    saveSession();
-
-    // Simulate AI response
-    const delay = 1200 + Math.random() * 2000;
-    setTimeout(function() {
-      isTyping = false;
-      typingIndicator.style.display = 'none';
-      updateSendBtn();
-
-      const reply = getSimulatedResponse(text);
-      const botMsg = { id: generateId(), role: 'assistant', content: reply };
-      messages.push(botMsg);
-      chatHistory.push({ role: 'assistant', content: reply });
-      if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
-
-      renderSingleMessage(botMsg);
-      scrollToBottom();
-      saveSession();
-
-      // Auto-speak if global TTS is on
-      if (isSpeakingGlobal) {
-        speakMessage(botMsg.id, reply);
-      }
-    }, delay);
-  }
-
-  function updateSendBtn() {
-    const hasText = chatInput.value.trim().length > 0;
-    sendBtn.style.opacity = (isTyping || !hasText) ? '0.5' : '1';
-    sendBtn.style.cursor = (isTyping || !hasText) ? 'not-allowed' : 'pointer';
-  }
-
-  // ─── Event Listeners ─────────────────────────────────────
-
-  // Send button
-  sendBtn.addEventListener('click', function() {
-    const text = chatInput.value.trim();
-    if (!text || isTyping) return;
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
-    sendMessage(text);
-    updateSendBtn();
-  });
-
-  // Textarea
-  chatInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-    updateSendBtn();
-  });
-
-  chatInput.addEventListener('focus', function() {
-    this.style.borderColor = 'rgba(123,92,255,0.5)';
-  });
-
-  chatInput.addEventListener('blur', function() {
-    this.style.borderColor = 'rgba(123,92,255,0.2)';
-  });
-
-  chatInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      const text = chatInput.value.trim();
-      if (!text || isTyping) return;
-      chatInput.value = '';
-      chatInput.style.height = 'auto';
-      sendMessage(text);
-      updateSendBtn();
-    }
-  });
-
-  // Suggestions
-  document.querySelectorAll('.suggestion-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      const text = this.getAttribute('data-text');
-      sendMessage(text);
-    });
-    btn.addEventListener('mouseenter', function() {
-      this.style.borderColor = 'var(--p)';
-      this.style.color = 'var(--t2)';
-      this.style.background = 'rgba(123,92,255,0.14)';
-      this.style.transform = 'translateY(-1px)';
-    });
-    btn.addEventListener('mouseleave', function() {
-      this.style.borderColor = 'rgba(123,92,255,0.25)';
-      this.style.color = 'var(--t3)';
-      this.style.background = 'rgba(123,92,255,0.07)';
-      this.style.transform = 'none';
-    });
-  });
-
-  // Global speak button
-  globalSpeakBtn.addEventListener('click', function() {
-    if (isSpeakingGlobal) {
-      stopSpeaking();
-    } else {
-      isSpeakingGlobal = true;
-      updateGlobalSpeakBtn();
-      // If there are messages, speak the last bot message
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'assistant') {
-          speakMessage(messages[i].id, messages[i].content);
-          break;
+        img.onerror = function() {
+          if (!hasRetried) {
+            hasRetried = true
+            var fallbackUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanDesc.substring(0, 100)) + '?width=512&height=512&seed=' + seed
+            img.src = fallbackUrl
+          } else {
+            loader.innerHTML = '⚠️ Erreur de génération — réessaie'
+          }
         }
+        img.src = primaryUrl
       }
-    }
-  });
 
-  // Gold button hover
-  goldBtn.addEventListener('mouseenter', function() {
-    this.style.transform = 'translateY(-1px)';
-    this.style.boxShadow = '0 0 16px rgba(244,200,66,0.4)';
-  });
-  goldBtn.addEventListener('mouseleave', function() {
-    this.style.transform = 'none';
-    this.style.boxShadow = 'none';
-  });
+      var bs = 'padding:2px 9px;border-radius:50px;border:1px solid rgba(123,92,255,0.15);background:rgba(123,92,255,0.04);color:var(--t4);font-family:Outfit,sans-serif;font-size:11px;cursor:pointer;transition:all .15s'
+      var acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;margin-top:2px'
+      var textForSpeak = textWithoutImg || text
 
-  // Logout button hover
-  logoutBtn.addEventListener('mouseenter', function() {
-    this.style.background = 'rgba(255,75,110,0.2)';
-  });
-  logoutBtn.addEventListener('mouseleave', function() {
-    this.style.background = 'rgba(255,75,110,0.1)';
-  });
-  logoutBtn.addEventListener('click', function() {
-    if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
-      localStorage.removeItem('nyxia_session');
-      window.location.reload();
-    }
-  });
+      var spk = document.createElement('button'); spk.style.cssText = bs; spk.textContent = '🔊 Écouter'
+      spk.addEventListener('click', function() { speakMsg(spk, textForSpeak) }); acts.appendChild(spk)
 
-  // Send button hover
-  sendBtn.addEventListener('mouseenter', function() {
-    if (!isTyping && chatInput.value.trim()) {
-      this.style.transform = 'scale(1.05)';
-      this.style.boxShadow = '0 0 32px rgba(123,92,255,0.6)';
-    }
-  });
-  sendBtn.addEventListener('mouseleave', function() {
-    this.style.transform = 'none';
-    this.style.boxShadow = '0 0 20px rgba(123,92,255,0.4)';
-  });
+      var cpy = document.createElement('button'); cpy.style.cssText = bs; cpy.textContent = '📋 Copier'
+      cpy.addEventListener('click', function() { navigator.clipboard.writeText(text).then(function() { cpy.textContent = '✓'; setTimeout(function() { cpy.textContent = '📋 Copier' }, 2000) }) }); acts.appendChild(cpy)
 
-  // ─── Panel Switching ─────────────────────────────────────
-  document.querySelectorAll('.nav-item').forEach(function(item) {
-    item.addEventListener('click', function(e) {
-      e.preventDefault();
-      if (this.getAttribute('data-disabled') === 'true') return;
-      const panel = this.getAttribute('data-panel');
-      switchPanel(panel);
-    });
-    item.addEventListener('mouseenter', function() {
-      if (this.getAttribute('data-disabled') !== 'true' && this.getAttribute('data-panel') !== activePanel) {
-        this.style.background = 'rgba(123,92,255,0.08)';
-      }
-    });
-    item.addEventListener('mouseleave', function() {
-      if (this.getAttribute('data-panel') !== activePanel) {
-        this.style.background = 'transparent';
-      }
-    });
-  });
+      var ret = document.createElement('button'); ret.style.cssText = bs; ret.textContent = '↺ Réessayer'
+      ret.addEventListener('click', function() { var last = chatHistory.filter(function(m) { return m.role === 'user' }).pop(); if (last) { if (chatHistory[chatHistory.length - 1].role === 'assistant') chatHistory.pop(); div.remove(); sendMessageText(last.content) } }); acts.appendChild(ret)
 
-  function switchPanel(panel) {
-    activePanel = panel;
-    // Update nav items
-    document.querySelectorAll('.nav-item').forEach(function(item) {
-      const id = item.getAttribute('data-panel');
-      const isDisabled = item.getAttribute('data-disabled') === 'true';
-      if (isDisabled) return;
-      if (id === panel) {
-        item.style.color = '#fff';
-        item.style.background = 'rgba(123,92,255,0.15)';
-        item.style.border = '1px solid rgba(123,92,255,0.3)';
-        item.style.boxShadow = '0 0 16px rgba(123,92,255,0.1)';
-      } else {
-        item.style.color = 'var(--t3)';
-        item.style.background = 'transparent';
-        item.style.border = '1px solid transparent';
-        item.style.boxShadow = 'none';
-      }
-    });
-    // Show/hide panels
-    const panels = ['chat', 'miroir', 'neuro', 'projets', 'messagerie'];
-    panels.forEach(function(p) {
-      const el = document.getElementById('panel-' + p);
-      el.style.display = p === panel ? 'flex' : 'none';
-    });
-  }
+      var pdfBtn = document.createElement('button'); pdfBtn.style.cssText = bs; pdfBtn.textContent = '⬇ PDF'
+      pdfBtn.addEventListener('click', function() { var w = window.open('', '_blank'); if (!w) return; var body = '<h2 style="color:#7B5CFF">NyXia IA</h2>' + escHtml(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); w.document.write('<!DOCTYPE html><html><head><title>NyXia</title><style>body{font-family:Georgia,serif;max-width:760px;margin:48px auto;line-height:1.85}</style></head><body>' + body + '</body></html>'); w.document.close(); setTimeout(function() { w.print() }, 300) }); acts.appendChild(pdfBtn)
 
-  // ─── Welcome Message ─────────────────────────────────────
-  function initWelcome() {
-    if (messages.length > 0) {
-      renderMessages();
-      // Don't show suggestions if there are already messages
-      if (messages.length > 1) {
-        showSuggestions = false;
-        suggestionsArea.style.display = 'none';
-      }
-      return;
+      wrapper.appendChild(acts)
+      div.appendChild(avatar); div.appendChild(wrapper)
+      msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight
     }
 
-    const welcome = userName
-      ? "Bienvenue dans mon univers ✦\n\nSalut **" + userName + "** ! Je suis NyXia, ton accompagnatrice réflexive. 💜\n\nComment te sens-tu en ce moment ?"
-      : "Bienvenue dans mon univers ✦\n\nJe suis **NyXia**, ton accompagnatrice réflexive. 💜\n\nAvant tout — comment tu t'appelles ?";
-
-    const msg = { id: generateId(), role: 'assistant', content: welcome };
-    messages.push(msg);
-    chatHistory.push({ role: 'assistant', content: welcome });
-    renderSingleMessage(msg);
-    scrollToBottom();
-    saveSession();
-  }
-
-  // ─── Update UI for user ─────────────────────────────────
-  function updateUserUI() {
-    const name = userName || 'Praticienne';
-    headerUsername.textContent = name;
-    sidebarUsername.textContent = name;
-    userAvatar.textContent = userName ? userName.charAt(0).toUpperCase() : '?';
-  }
-
-  // ─── Handle user name from first message ─────────────────
-  function checkForName(text) {
-    if (!userName && messages.length <= 3) {
-      const clean = text.replace(/[^a-zA-ZÀ-ÿ\s'-]/g, '').trim();
-      const words = clean.split(/\s+/);
-      if (words.length >= 1 && words.length <= 3) {
-        const possibleName = words.map(function(w) {
-          return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-        }).join(' ');
-        if (possibleName.length >= 2 && possibleName.length <= 30 && !/^(je|tu|il|elle|nous|vous|ils|elles|un|une|le|la|les|de|du|des|et|ou|mais|donc|car|ni|que|qui|quoi|dont|où|comment|pourquoi|c'est|salut|bonjour|bonsoir|merci|oui|non|bien|pas|plus|très|trop|beaucoup|aussi|encore|toujours|jamais|rien|tout|chaque|chaque)$/i.test(possibleName)) {
-          userName = possibleName;
-          updateUserUI();
-          saveSession();
-          return true;
-        }
-      }
+    function addUserMessage(text) {
+      var msgs = document.getElementById('chat-messages')
+      var div = document.createElement('div'); div.className = 'msg user'
+      var initial = clientName.charAt(0).toUpperCase()
+      div.innerHTML = '<div class="msg-bubble">' + escHtml(text) + '</div><div class="msg-avatar" style="background:linear-gradient(135deg,#7B5CFF,#5A6CFF);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:13px;border-radius:50%;width:32px;height:32px;flex-shrink:0">' + initial + '</div>'
+      msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight
     }
-    return false;
-  }
 
-  // Override sendMessage to include name detection
-  const originalSendMessage = sendMessage;
-  sendMessage = function(text) {
-    originalSendMessage(text);
-    // Check if user introduced their name
-    setTimeout(function() {
-      checkForName(text);
-    }, 100);
-  };
+    function addTyping() {
+      var msgs = document.getElementById('chat-messages')
+      var div = document.createElement('div'); div.className = 'msg bot'; div.id = 'typing-indicator'
+      div.innerHTML = '<img src="/NyXia.png" class="msg-avatar" alt="NyXia"><div class="msg-bubble"><span class="nx-dots"><i></i><i></i><i></i></span></div>'
+      msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight
+    }
 
-  // ─── Initialize ───────────────────────────────────────────
-  updateUserUI();
-  initWelcome();
-  updateSendBtn();
+    function removeTyping() { var t = document.getElementById('typing-indicator'); if (t) t.remove() }
 
-  // Pre-load voices
-  if (window.speechSynthesis) {
-    window.speechSynthesis.getVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    /* ═══════ TTS ═══════ */
+    function speakMsg(btn, text) {
+      if (!window.speechSynthesis) return
+      if (btn._nxSpeaking) {
+        window.speechSynthesis.cancel(); btn._nxSpeaking = false; btn.textContent = '🔊 Écouter'; btn.style.borderColor = 'rgba(123,92,255,0.15)'; btn.style.color = 'var(--t4)'; btn.style.background = 'rgba(123,92,255,0.04)'; return
+      }
+      window.speechSynthesis.cancel()
+      document.querySelectorAll('.msg button').forEach(function(b) { if (b._nxSpeaking) { b._nxSpeaking = false; b.textContent = '🔊 Écouter'; b.style.borderColor = 'rgba(123,92,255,0.15)'; b.style.color = 'var(--t4)'; b.style.background = 'rgba(123,92,255,0.04)' } })
+      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶]/g, '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').trim()
+      if (!clean) return
+      btn._nxSpeaking = true; btn.textContent = '⏹ Arrêter'; btn.style.borderColor = 'rgba(0,230,118,0.4)'; btn.style.color = '#00E676'; btn.style.background = 'rgba(0,230,118,0.08)'
+      var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
+      function doSpeak() { var voice = pickBestFrenchVoice(window.speechSynthesis.getVoices()); if (voice) utt.voice = voice; window.speechSynthesis.speak(utt) }
+      utt.onend = utt.onerror = function() { btn._nxSpeaking = false; btn.textContent = '🔊 Écouter'; btn.style.borderColor = 'rgba(123,92,255,0.15)'; btn.style.color = 'var(--t4)'; btn.style.background = 'rgba(123,92,255,0.04)' }
+      setTimeout(doSpeak, 200)
+    }
+
+    function toggleSpeak() {
+      isSpeaking = !isSpeaking; var btn = document.getElementById('btn-speak')
+      if (isSpeaking) { btn.textContent = '🔊 NyXia parle...'; btn.classList.add('speaking') } 
+      else { btn.textContent = '🔊 Écouter NyXia'; btn.classList.remove('speaking'); window.speechSynthesis.cancel() }
+    }
+
+    function speakText(text) {
+      if (!window.speechSynthesis) return; window.speechSynthesis.cancel()
+      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶]/g, '').replace(/<br>/g, ' ').trim()
+      if (!clean) return
+      var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
+      function trySpeak() { var voice = pickBestFrenchVoice(window.speechSynthesis.getVoices()); if (voice) utt.voice = voice; window.speechSynthesis.speak(utt) }
+      utt.onend = function() { var btn = document.getElementById('btn-speak'); if (btn) { btn.textContent = '🔊 Écouter NyXia'; btn.classList.remove('speaking') } isSpeaking = false }
+      utt.onerror = function() { isSpeaking = false }
+      setTimeout(trySpeak, 200)
+    }
+
+    if (window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = function() {
-        window.speechSynthesis.getVoices();
-      };
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // ─── STARFIELD ANIMATION (from starry-background.tsx) ───
-  // ═══════════════════════════════════════════════════════════
-  (function() {
-    const canvas = document.getElementById('starry-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let stars = [];
-    let shootingStars = [];
-    let nebulae = [];
-    let animationId;
-
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      initStars();
-    }
-
-    function initStars() {
-      const count = Math.floor((canvas.width * canvas.height) / 2800);
-      stars = [];
-
-      var colors = [
-        'rgba(167, 139, 250,',
-        'rgba(79, 163, 255,',
-        'rgba(255, 255, 255,',
-        'rgba(244, 200, 66,',
-        'rgba(123, 92, 255,'
-      ];
-
-      for (var i = 0; i < count; i++) {
-        var colorIdx = Math.random() < 0.03 ? 3 : Math.floor(Math.random() * 3);
-        stars.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          size: Math.random() * 2.2 + 0.3,
-          opacity: Math.random() * 0.7 + 0.3,
-          twinkleSpeed: Math.random() * 0.03 + 0.005,
-          twinklePhase: Math.random() * Math.PI * 2,
-          color: colors[colorIdx]
-        });
+        var voices = window.speechSynthesis.getVoices()
+        pickBestFrenchVoice(voices)
+        var frVoices = voices.filter(function(v) { return v.lang && v.lang.indexOf('fr') === 0 })
+        console.log('🔊 Voix FR disponibles:', frVoices.map(function(v) { return v.name }).join(', '))
       }
-
-      nebulae = [];
-      var nebulaCount = Math.floor(Math.random() * 3) + 2;
-      for (var j = 0; j < nebulaCount; j++) {
-        nebulae.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          radius: Math.random() * 200 + 100,
-          color1: 'rgba(' + (Math.random() < 0.5 ? '123, 92, 255' : '79, 163, 255') + ', ',
-          color2: 'rgba(' + (Math.random() < 0.5 ? '90, 108, 255' : '167, 139, 250') + ', ',
-          phase: Math.random() * Math.PI * 2,
-          speed: Math.random() * 0.002 + 0.001
-        });
-      }
+      pickBestFrenchVoice(window.speechSynthesis.getVoices())
     }
 
-    function drawNebulae(time) {
-      nebulae.forEach(function(n) {
-        var pulse = Math.sin(time * n.speed + n.phase) * 0.5 + 0.5;
-        var radius = n.radius * (0.8 + pulse * 0.4);
-        var gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, radius);
-        gradient.addColorStop(0, n.color1 + (0.04 + pulse * 0.02) + ')');
-        gradient.addColorStop(0.5, n.color2 + (0.02 + pulse * 0.01) + ')');
-        gradient.addColorStop(1, 'rgba(10, 22, 40, 0)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(n.x - radius, n.y - radius, radius * 2, radius * 2);
-      });
-    }
+    /* ═══════ FILE UPLOAD ═══════ */
+    document.addEventListener('DOMContentLoaded', function() {
+      var fi = document.getElementById('chat-file')
+      if (fi) fi.addEventListener('change', function() {
+        var f = this.files[0]; if (!f) return
+        var size = f.size > 1048576 ? (f.size / 1048576).toFixed(1) + 'MB' : Math.round(f.size / 1024) + 'KB'
+        _currentAttachment = { name: f.name, type: f.type, data: null }
+        var bar = document.getElementById('attach-bar'), nm = document.getElementById('attach-name'), sendBtn = document.getElementById('btn-send')
+        if (bar) bar.style.display = 'flex'
+        if (nm) nm.innerHTML = '<strong>' + f.name + '</strong> (' + size + ') — ⏳ Chargement...'
+        if (sendBtn) sendBtn.disabled = true
+        var reader = new FileReader()
+        reader.onload = function(e) { _currentAttachment.data = e.target.result.split(',')[1]; if (nm) nm.innerHTML = '<strong>' + f.name + '</strong> (' + size + ') — ✅ Prêt'; if (sendBtn) sendBtn.disabled = false }
+        reader.onerror = function() { _currentAttachment = null; if (nm) nm.innerHTML = '❌ Erreur'; if (sendBtn) sendBtn.disabled = false }
+        reader.readAsDataURL(f)
+      })
+      var ca = document.getElementById('btn-clear-attach')
+      if (ca) ca.addEventListener('click', function() { _currentAttachment = null; var bar = document.getElementById('attach-bar'), fi2 = document.getElementById('chat-file'); if (bar) bar.style.display = 'none'; if (fi2) fi2.value = '' })
+    })
 
-    function drawStars(time) {
-      stars.forEach(function(star) {
-        var twinkle = Math.sin(time * star.twinkleSpeed + star.twinklePhase) * 0.5 + 0.5;
-        var currentOpacity = star.opacity * (0.4 + twinkle * 0.6);
+    var chatInput = document.getElementById('chat-input')
+    chatInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px' })
+    chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } })
 
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fillStyle = star.color + currentOpacity + ')';
-        ctx.fill();
-
-        if (star.size > 1.4) {
-          ctx.beginPath();
-          ctx.arc(star.x, star.y, star.size * 3, 0, Math.PI * 2);
-          ctx.fillStyle = star.color + (currentOpacity * 0.08) + ')';
-          ctx.fill();
-        }
-      });
-    }
-
-    function spawnShootingStar() {
-      if (shootingStars.length > 2) return;
-      if (Math.random() > 0.003) return;
-      shootingStars.push({
-        x: Math.random() * canvas.width * 0.8,
-        y: Math.random() * canvas.height * 0.4,
-        length: Math.random() * 80 + 40,
-        speed: Math.random() * 4 + 3,
-        angle: Math.PI / 6 + Math.random() * 0.3,
-        opacity: 1,
-        life: 0,
-        maxLife: 60 + Math.random() * 40
-      });
-    }
-
-    function drawShootingStars() {
-      shootingStars = shootingStars.filter(function(s) { return s.life < s.maxLife; });
-      shootingStars.forEach(function(s) {
-        s.x += Math.cos(s.angle) * s.speed;
-        s.y += Math.sin(s.angle) * s.speed;
-        s.life++;
-        s.opacity = 1 - s.life / s.maxLife;
-
-        var tailX = s.x - Math.cos(s.angle) * s.length;
-        var tailY = s.y - Math.sin(s.angle) * s.length;
-
-        var gradient = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
-        gradient.addColorStop(0, 'rgba(167, 139, 250, 0)');
-        gradient.addColorStop(0.7, 'rgba(167, 139, 250, ' + (s.opacity * 0.4) + ')');
-        gradient.addColorStop(1, 'rgba(255, 255, 255, ' + s.opacity + ')');
-
-        ctx.beginPath();
-        ctx.moveTo(tailX, tailY);
-        ctx.lineTo(s.x, s.y);
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, ' + s.opacity + ')';
-        ctx.fill();
-      });
-    }
-
-    function animate(time) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      var bg = ctx.createRadialGradient(
-        canvas.width * 0.3, canvas.height * 0.2, 0,
-        canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.8
-      );
-      bg.addColorStop(0, 'rgba(15, 28, 63, 0.15)');
-      bg.addColorStop(0.5, 'rgba(10, 22, 40, 0.1)');
-      bg.addColorStop(1, 'rgba(10, 22, 40, 0)');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      drawNebulae(time);
-      drawStars(time);
-      spawnShootingStar();
-      drawShootingStars();
-
-      animationId = requestAnimationFrame(animate);
-    }
-
-    resize();
-    animationId = requestAnimationFrame(animate);
-    window.addEventListener('resize', resize);
-  })();
-
-})();
-</script>
+    function escHtml(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML }
+  </script>
 </body>
 </html>

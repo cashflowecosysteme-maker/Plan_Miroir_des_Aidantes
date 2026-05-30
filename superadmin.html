@@ -520,37 +520,13 @@ async function doAdminLogin() {
       return;
     }
 
-    // Si le Worker n'est pas déployé, fallback local
-    // Mot de passe par défaut : NyXiaAdmin2026!
-    if (password === 'NyXiaAdmin2026!') {
-      ADMIN_SESSION_TOKEN = 'local_' + crypto.randomUUID();
-      sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({
-        token: ADMIN_SESSION_TOKEN,
-        created: Date.now()
-      }));
-      LOGIN_ATTEMPTS = 0;
-      showAdminPanel();
-      loadAccounts();
-      return;
-    }
-
+    // Pas de fallback local — le Worker DOIT répondre
     handleFailedAttempt();
 
   } catch(e) {
-    // Erreur réseau — essayer le fallback local
-    if (password === 'NyXiaAdmin2026!') {
-      ADMIN_SESSION_TOKEN = 'local_' + crypto.randomUUID();
-      sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({
-        token: ADMIN_SESSION_TOKEN,
-        created: Date.now()
-      }));
-      LOGIN_ATTEMPTS = 0;
-      showAdminPanel();
-      loadAccounts();
-      return;
-    }
-
-    handleFailedAttempt();
+    showLoginError('⚠️ Impossible de contacter le serveur. Vérifiez que le Worker Cloudflare est déployé et que le KV namespace est configuré.');
+    btn.disabled = false;
+    btn.textContent = '🔓 Accéder à l\'administration';
   }
 
   btn.disabled = false;
@@ -663,17 +639,9 @@ async function loadAccounts() {
       tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun compte trouvé</td></tr>';
     }
   } catch(e) {
-    // Si le Worker n'est pas déployé, charger depuis localStorage
-    loadLocalAccounts();
+    // Pas de fallback — le Worker DOIT répondre
+    tbody.innerHTML = '<tr><td colspan="7" class="empty" style="color:var(--red)">⚠️ Erreur de connexion au serveur.<br><br>Vérifiez que le Worker Cloudflare est bien déployé.<br>Les comptes ne peuvent PAS être gérés localement.</td></tr>';
   }
-}
-
-function loadLocalAccounts() {
-  var data = localStorage.getItem('nyxia_clients');
-  accounts = data ? JSON.parse(data) : [];
-  renderAccounts();
-  document.getElementById('stat-clients').textContent = accounts.length;
-  document.getElementById('stat-active').textContent = accounts.filter(function(a){return a.active !== false;}).length;
 }
 
 function renderAccounts() {
@@ -785,25 +753,8 @@ async function createAccount(e) {
       showError(res.error || 'Erreur lors de la création');
     }
   } catch(e) {
-    // Fallback local si Worker pas déployé
-    if (accounts.find(function(a){return a.email === email;})) {
-      showError('Cet email existe déjà (local)');
-    } else {
-      var newAcc = {
-        id: Date.now().toString(),
-        firstName: firstname, lastName: lastname,
-        name: firstname + ' ' + lastname,
-        email: email, password: password,
-        products: products, active: true,
-        role: 'client',
-        createdAt: new Date().toISOString()
-      };
-      accounts.push(newAcc);
-      localStorage.setItem('nyxia_clients', JSON.stringify(accounts));
-      showSuccess('✅ Compte créé (local) : ' + firstname + ' ' + lastname);
-      document.getElementById('create-form').reset();
-      renderAccounts();
-    }
+    // Pas de fallback local — afficher l'erreur
+    showError('⚠️ Impossible de contacter le serveur. Le compte n\'a PAS été créé. Vérifiez que le Worker Cloudflare est déployé.');
   }
 
   btn.disabled = false;
@@ -867,26 +818,10 @@ async function saveEdit(e) {
       closeModal();
       loadAccounts();
     } else {
-      // Fallback local
-      var idx = accounts.findIndex(function(a){return a.email === originalEmail;});
-      if (idx !== -1) {
-        accounts[idx].firstName = updateData.firstName;
-        accounts[idx].lastName = updateData.lastName;
-        accounts[idx].name = updateData.name;
-        if (updateData.newEmail !== originalEmail) accounts[idx].email = updateData.newEmail;
-        if (updateData.password) accounts[idx].password = updateData.password;
-        accounts[idx].products = products;
-        accounts[idx].active = updateData.status === 'active';
-        localStorage.setItem('nyxia_clients', JSON.stringify(accounts));
-        showSuccess('✅ Compte modifié (local)');
-        closeModal();
-        renderAccounts();
-      } else {
-        showError(res.error || 'Erreur lors de la modification');
-      }
+      showError(res.error || 'Erreur lors de la modification');
     }
   } catch(e2) {
-    showError('Erreur de connexion');
+    showError('⚠️ Impossible de contacter le serveur. La modification n\'a PAS été enregistrée.');
   }
 
   return false;
@@ -919,14 +854,7 @@ async function confirmDelete() {
       showError(res.error || 'Erreur lors de la suppression');
     }
   } catch(e) {
-    // Fallback local
-    accounts = accounts.filter(function(a){return a.email !== email;});
-    localStorage.setItem('nyxia_clients', JSON.stringify(accounts));
-    showSuccess('✅ Compte supprimé (local)');
-    closeDeleteModal();
-    renderAccounts();
-    document.getElementById('stat-clients').textContent = accounts.length;
-    document.getElementById('stat-active').textContent = accounts.filter(function(a){return a.active !== false;}).length;
+    showError('⚠️ Impossible de contacter le serveur. La suppression n\'a PAS été effectuée.');
   }
 }
 

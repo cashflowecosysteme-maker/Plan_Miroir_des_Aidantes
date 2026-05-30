@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NyXia — Super Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg1: #0A1628;
+    --bg2: #0F1C3F;
+    --bg3: #1A2554;
+    --p: #7B5CFF;
+    --p2: #5A6CFF;
+    --p3: #4FA3FF;
+    --t: #FFFFFF;
+    --t2: #D6D9F0;
+    --t3: #8891B8;
+    --t4: #4a5278;
+    --green: #00E676;
+    --red: #ff6b6b;
+    --gold: #FFD700;
+  }
+
+  html, body {
+    min-height: 100%;
+    background: var(--bg2);
+    color: var(--t);
+    font-family: 'Outfit', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.65;
+  }
+
+  .sa-root button { font-family: 'Space Grotesk', sans-serif; cursor: pointer; }
+  .sa-root input, .sa-root select { font-family: 'Outfit', sans-serif; }
+
+  /* Scrollbar */
+  .table-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+  .table-scroll::-webkit-scrollbar-track { background: transparent; }
+  .table-scroll::-webkit-scrollbar-thumb { background: rgba(123,92,255,0.2); border-radius: 2px; }
+
+  .modal-scroll::-webkit-scrollbar { width: 4px; }
+  .modal-scroll::-webkit-scrollbar-track { background: transparent; }
+  .modal-scroll::-webkit-scrollbar-thumb { background: rgba(123,92,255,0.2); border-radius: 2px; }
+
+  /* Animations */
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  .msg-anim { animation: msgIn .3s ease; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .header-left span.hide-mobile { display: none; }
+    .header-right span.hide-mobile { display: none; }
+  }
+  @media (max-width: 500px) {
+    .header-right { gap: 6px !important; }
+    .header-right button { padding: 6px 10px !important; font-size: 11px !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Starfield Canvas -->
+<canvas id="starry-canvas" style="position:fixed;inset:0;z-index:0;pointer-events:none;"></canvas>
+
+<div class="sa-root" style="position:relative;z-index:1;background:#0F1C3F;min-height:100vh;">
+
+  <!-- ═══ HEADER ═══ -->
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(15,28,63,0.9);border-bottom:1px solid rgba(123,92,255,0.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;">
+    <!-- Left -->
+    <div class="header-left" style="display:flex;align-items:center;gap:12px;">
+      <img src="NyXia.png" alt="NyXia" style="width:40px;height:40px;border-radius:50%;object-fit:cover;filter:drop-shadow(0 0 10px rgba(123,92,255,0.5));">
+      <h1 style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;letter-spacing:1;color:#FFFFFF;">NyXia</h1>
+      <span style="color:#4FA3FF;font-size:12px;font-weight:600;background:rgba(123,92,255,0.15);padding:4px 10px;border-radius:50px;margin-left:8px;">Super Admin</span>
+    </div>
+    <!-- Right -->
+    <div class="header-right" style="display:flex;align-items:center;gap:12px;">
+      <span class="hide-mobile" style="font-size:13px;color:#D6D9F0;">Admin</span>
+      <button onclick="window.location.href='dashboard.html'" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(123,92,255,0.3);background:rgba(123,92,255,0.1);color:#4FA3FF;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .2s;font-family:'Space Grotesk',sans-serif;">← Dashboard</button>
+      <button id="logout-btn" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,82,82,0.3);background:rgba(255,82,82,0.1);color:#ff6b6b;font-size:12px;font-weight:600;transition:all .2s;font-family:'Space Grotesk',sans-serif;">Déconnexion</button>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN ═══ -->
+  <main style="max-width:1200px;margin:0 auto;padding:24px;">
+
+    <!-- ─── Messages ─── -->
+    <div id="success-msg" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px;background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);color:#00E676;" class="msg-anim"></div>
+    <div id="error-msg" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px;background:rgba(255,82,82,0.1);border:1px solid rgba(255,82,82,0.3);color:#ff6b6b;" class="msg-anim"></div>
+
+    <!-- ─── Stats Grid ─── -->
+    <div id="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
+      <div style="background:rgba(26,37,84,0.5);border:1px solid rgba(123,92,255,0.15);border-radius:16px;padding:20px;text-align:center;">
+        <div id="stat-clients" style="font-family:'Orbitron',monospace;font-size:32px;font-weight:700;color:#4FA3FF;">0</div>
+        <div style="font-size:12px;color:#8891B8;margin-top:4px;text-transform:uppercase;letter-spacing:1;">Clients</div>
+      </div>
+      <div style="background:rgba(26,37,84,0.5);border:1px solid rgba(123,92,255,0.15);border-radius:16px;padding:20px;text-align:center;">
+        <div id="stat-active" style="font-family:'Orbitron',monospace;font-size:32px;font-weight:700;color:#4FA3FF;">0</div>
+        <div style="font-size:12px;color:#8891B8;margin-top:4px;text-transform:uppercase;letter-spacing:1;">Comptes actifs</div>
+      </div>
+      <div style="background:rgba(26,37,84,0.5);border:1px solid rgba(123,92,255,0.15);border-radius:16px;padding:20px;text-align:center;">
+        <div id="stat-pro" style="font-family:'Orbitron',monospace;font-size:32px;font-weight:700;color:#4FA3FF;">0</div>
+        <div style="font-size:12px;color:#8891B8;margin-top:4px;text-transform:uppercase;letter-spacing:1;">Miroir Pro</div>
+      </div>
+    </div>
+
+    <!-- ─── Create Account Panel ─── -->
+    <div style="background:rgba(26,37,84,0.5);border:1px solid rgba(123,92,255,0.15);border-radius:16px;padding:24px;margin-bottom:24px;">
+      <!-- Panel header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(123,92,255,0.1);">
+        <div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;">+ Créer un compte client</div>
+          <div style="font-size:12px;color:#8891B8;margin-top:2px;">Créez un nouveau compte avec un ou plusieurs produits</div>
+        </div>
+      </div>
+      <!-- Form -->
+      <form id="create-form">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+          <!-- Prénom -->
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Prénom *</label>
+            <input type="text" id="new-firstname" placeholder="Jean" required style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+          </div>
+          <!-- Nom -->
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Nom *</label>
+            <input type="text" id="new-lastname" placeholder="Tremblay" required style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+          </div>
+          <!-- Courriel -->
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Courriel *</label>
+            <input type="email" id="new-email" placeholder="jean@exemple.com" required style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+          </div>
+          <!-- Mot de passe -->
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Mot de passe *</label>
+            <div style="position:relative;">
+              <input type="text" id="new-password" placeholder="MotDePasse123" required minlength="6" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+              <button type="button" id="new-pwd-toggle" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#8891B8;cursor:pointer;padding:4px;font-size:14px;">🙈</button>
+            </div>
+            <span style="font-size:11px;color:#8891B8;margin-top:2px;">Min. 6 caractères — visible pour vous montrer au client</span>
+          </div>
+        </div>
+        <!-- Products checkboxes -->
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:16px;">
+          <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Produits *</label>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:8px 0;">
+            <label id="new-pro-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:rgba(123,92,255,0.1);border-radius:8px;border:1px solid rgba(123,92,255,0.2);transition:all .2s;">
+              <input type="checkbox" id="new-pro" style="width:18px;height:18px;accent-color:#7B5CFF;">
+              <span style="font-size:14px;">🪞 Miroir Pro</span>
+            </label>
+            <label id="new-flip-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:rgba(123,92,255,0.1);border-radius:8px;border:1px solid rgba(123,92,255,0.2);transition:all .2s;">
+              <input type="checkbox" id="new-flipbook" style="width:18px;height:18px;accent-color:#7B5CFF;">
+              <span style="font-size:14px;">📚 Miroir des Aidantes (formation)</span>
+            </label>
+          </div>
+        </div>
+        <!-- Actions -->
+        <div style="display:flex;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(123,92,255,0.1);">
+          <button type="submit" id="create-btn" style="padding:12px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#7B5CFF,#5A6CFF);color:#fff;font-size:14px;font-weight:700;transition:all .2s;box-shadow:0 0 20px rgba(123,92,255,0.3);font-family:'Space Grotesk',sans-serif;">Créer le compte</button>
+          <button type="button" id="reset-btn" style="padding:12px 24px;border-radius:10px;border:1px solid rgba(123,92,255,0.3);background:transparent;color:#D6D9F0;font-size:14px;font-weight:600;transition:all .2s;font-family:'Space Grotesk',sans-serif;">Réinitialiser</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ─── Accounts Table Panel ─── -->
+    <div style="background:rgba(26,37,84,0.5);border:1px solid rgba(123,92,255,0.15);border-radius:16px;padding:24px;margin-bottom:24px;">
+      <!-- Panel header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(123,92,255,0.1);">
+        <div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;">📋 Liste des comptes clients</div>
+          <div style="font-size:12px;color:#8891B8;margin-top:2px;">Cliquez sur ✏️ pour modifier un compte</div>
+        </div>
+        <button id="refresh-btn" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(123,92,255,0.3);background:transparent;color:#D6D9F0;font-size:12px;font-weight:600;transition:all .2s;font-family:'Space Grotesk',sans-serif;">↻ Actualiser</button>
+      </div>
+      <!-- Table -->
+      <div class="table-scroll" style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="padding:12px 16px;text-align:left;border-bottom:1px solid rgba(123,92,255,0.1);font-size:11px;font-weight:700;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;background:rgba(15,28,63,0.4);">Nom</th>
+              <th style="padding:12px 16px;text-align:left;border-bottom:1px solid rgba(123,92,255,0.1);font-size:11px;font-weight:700;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;background:rgba(15,28,63,0.4);">Courriel</th>
+              <th style="padding:12px 16px;text-align:left;border-bottom:1px solid rgba(123,92,255,0.1);font-size:11px;font-weight:700;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;background:rgba(15,28,63,0.4);">Mot de passe</th>
+              <th style="padding:12px 16px;text-align:left;border-bottom:1px solid rgba(123,92,255,0.1);font-size:11px;font-weight:700;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;background:rgba(15,28,63,0.4);">Produits</th>
+              <th style="padding:12px 16px;text-align:left;border-bottom:1px solid rgba(123,92,255,0.1);font-size:11px;font-weight:700;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;background:rgba(15,28,63,0.4);">Statut</th>
+              <th style="padding:12px 16px;text-align:left;border-bottom:1px solid rgba(123,92,255,0.1);font-size:11px;font-weight:700;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;background:rgba(15,28,63,0.4);">Créé le</th>
+              <th style="padding:12px 16px;text-align:left;border-bottom:1px solid rgba(123,92,255,0.1);font-size:11px;font-weight:700;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;background:rgba(15,28,63,0.4);">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ EDIT MODAL ═══ -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
+  <div style="background:#1A2554;border:1px solid rgba(123,92,255,0.2);border-radius:20px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;margin:16px;" class="modal-scroll">
+    <!-- Modal header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;">Modifier le compte</div>
+      <button id="edit-close" style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,82,82,0.2);background:transparent;color:#ff6b6b;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Space Grotesk',sans-serif;">×</button>
+    </div>
+    <!-- Edit form -->
+    <form id="edit-form">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+        <!-- Prénom -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Prénom</label>
+          <input type="text" id="edit-firstname" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+        </div>
+        <!-- Nom -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Nom</label>
+          <input type="text" id="edit-lastname" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+        </div>
+        <!-- Courriel -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Courriel</label>
+          <input type="email" id="edit-email" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+        </div>
+        <!-- Nouveau mot de passe -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Nouveau mot de passe</label>
+          <div style="position:relative;">
+            <input type="text" id="edit-password" placeholder="Laisser vide pour ne pas changer" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+            <button type="button" id="edit-pwd-toggle" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#8891B8;cursor:pointer;padding:4px;font-size:14px;">🙈</button>
+          </div>
+        </div>
+        <!-- Produits -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Produits</label>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:8px 0;">
+            <label id="edit-pro-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:rgba(123,92,255,0.1);border-radius:8px;border:1px solid rgba(123,92,255,0.2);transition:all .2s;">
+              <input type="checkbox" id="edit-pro" style="width:18px;height:18px;accent-color:#7B5CFF;">
+              <span style="font-size:14px;">🪞 Miroir Pro</span>
+            </label>
+            <label id="edit-flip-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:rgba(123,92,255,0.1);border-radius:8px;border:1px solid rgba(123,92,255,0.2);transition:all .2s;">
+              <input type="checkbox" id="edit-flipbook" style="width:18px;height:18px;accent-color:#7B5CFF;">
+              <span style="font-size:14px;">📚 Miroir des Aidantes</span>
+            </label>
+          </div>
+        </div>
+        <!-- Statut -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:11px;font-weight:600;color:#8891B8;text-transform:uppercase;letter-spacing:0.5;">Statut</label>
+          <select id="edit-status" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.6);color:#FFFFFF;font-size:14px;outline:none;">
+            <option value="active">Actif</option>
+            <option value="suspended">Suspendu</option>
+          </select>
+        </div>
+      </div>
+      <!-- Actions -->
+      <div style="display:flex;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(123,92,255,0.1);">
+        <button type="submit" id="save-edit-btn" style="padding:12px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#7B5CFF,#5A6CFF);color:#fff;font-size:14px;font-weight:700;transition:all .2s;box-shadow:0 0 20px rgba(123,92,255,0.3);font-family:'Space Grotesk',sans-serif;">Enregistrer</button>
+        <button type="button" id="cancel-edit-btn" style="padding:12px 24px;border-radius:10px;border:1px solid rgba(123,92,255,0.3);background:transparent;color:#D6D9F0;font-size:14px;font-weight:600;transition:all .2s;font-family:'Space Grotesk',sans-serif;">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ DELETE MODAL ═══ -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
+  <div style="background:#1A2554;border:1px solid rgba(123,92,255,0.2);border-radius:20px;padding:24px;width:100%;max-width:480px;margin:16px;">
+    <!-- Modal header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;">⚠️ Confirmer la suppression</div>
+      <button id="delete-close" style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,82,82,0.2);background:transparent;color:#ff6b6b;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Space Grotesk',sans-serif;">×</button>
+    </div>
+    <p style="margin-bottom:20px;color:#D6D9F0;line-height:1.6;">Voulez-vous vraiment supprimer le compte de <strong id="delete-name-display" style="color:#FFFFFF;">—</strong> ?</p>
+    <p style="margin-bottom:20px;color:#ff6b6b;font-size:13px;">Cette action est irréversible. Toutes les données du client seront perdues.</p>
+    <!-- Actions -->
+    <div style="display:flex;gap:12px;padding-top:16px;border-top:1px solid rgba(123,92,255,0.1);">
+      <button type="button" id="confirm-delete-btn" style="padding:12px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6b6b,#cc4444);color:#fff;font-size:14px;font-weight:700;transition:all .2s;box-shadow:0 0 20px rgba(255,82,82,0.3);font-family:'Space Grotesk',sans-serif;">Supprimer définitivement</button>
+      <button type="button" id="cancel-delete-btn" style="padding:12px 24px;border-radius:10px;border:1px solid rgba(123,92,255,0.3);background:transparent;color:#D6D9F0;font-size:14px;font-weight:600;transition:all .2s;font-family:'Space Grotesk',sans-serif;">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── STATE ──────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  var accounts = [];
+  var msgTimer = null;
+  var copiedIdx = null;
+  var editOriginalEmail = '';
+  var deleteTargetEmail = '';
+  var deleteTargetName = '';
+  var newPwdVisible = true;
+  var editPwdVisible = true;
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── LOCAL STORAGE ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function loadAccounts() {
+    try {
+      var saved = localStorage.getItem('nyxia_superadmin_accounts');
+      if (saved) {
+        accounts = JSON.parse(saved);
+      } else {
+        accounts = [];
+      }
+    } catch(e) {
+      accounts = [];
+    }
+  }
+
+  function saveAccounts() {
+    try {
+      localStorage.setItem('nyxia_superadmin_accounts', JSON.stringify(accounts));
+    } catch(e) {}
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── DOM REFS ─────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  var successMsgEl = document.getElementById('success-msg');
+  var errorMsgEl = document.getElementById('error-msg');
+  var statClients = document.getElementById('stat-clients');
+  var statActive = document.getElementById('stat-active');
+  var statPro = document.getElementById('stat-pro');
+  var createForm = document.getElementById('create-form');
+  var newFirstname = document.getElementById('new-firstname');
+  var newLastname = document.getElementById('new-lastname');
+  var newEmail = document.getElementById('new-email');
+  var newPassword = document.getElementById('new-password');
+  var newPro = document.getElementById('new-pro');
+  var newFlipbook = document.getElementById('new-flipbook');
+  var newProLabel = document.getElementById('new-pro-label');
+  var newFlipLabel = document.getElementById('new-flip-label');
+  var newPwdToggle = document.getElementById('new-pwd-toggle');
+  var createBtn = document.getElementById('create-btn');
+  var resetBtn = document.getElementById('reset-btn');
+  var refreshBtn = document.getElementById('refresh-btn');
+  var tbody = document.getElementById('accounts-tbody');
+
+  var editModal = document.getElementById('edit-modal');
+  var editForm = document.getElementById('edit-form');
+  var editFirstname = document.getElementById('edit-firstname');
+  var editLastname = document.getElementById('edit-lastname');
+  var editEmail = document.getElementById('edit-email');
+  var editPassword = document.getElementById('edit-password');
+  var editPro = document.getElementById('edit-pro');
+  var editFlipbook = document.getElementById('edit-flipbook');
+  var editProLabel = document.getElementById('edit-pro-label');
+  var editFlipLabel = document.getElementById('edit-flip-label');
+  var editStatus = document.getElementById('edit-status');
+  var editPwdToggle = document.getElementById('edit-pwd-toggle');
+  var editCloseBtn = document.getElementById('edit-close');
+  var cancelEditBtn = document.getElementById('cancel-edit-btn');
+  var saveEditBtn = document.getElementById('save-edit-btn');
+
+  var deleteModal = document.getElementById('delete-modal');
+  var deleteNameDisplay = document.getElementById('delete-name-display');
+  var deleteCloseBtn = document.getElementById('delete-close');
+  var confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+  var cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── MESSAGES ─────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function showSuccess(msg) {
+    if (msgTimer) clearTimeout(msgTimer);
+    successMsgEl.textContent = msg;
+    successMsgEl.style.display = 'block';
+    errorMsgEl.style.display = 'none';
+    msgTimer = setTimeout(function() {
+      successMsgEl.style.display = 'none';
+    }, 5000);
+  }
+
+  function showError(msg) {
+    if (msgTimer) clearTimeout(msgTimer);
+    errorMsgEl.textContent = msg;
+    errorMsgEl.style.display = 'block';
+    successMsgEl.style.display = 'none';
+    msgTimer = setTimeout(function() {
+      errorMsgEl.style.display = 'none';
+    }, 5000);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── STATS ────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function updateStats() {
+    var total = accounts.length;
+    var active = accounts.filter(function(a) { return a.status !== 'suspended'; }).length;
+    var pro = accounts.filter(function(a) { return a.products && a.products.indexOf('pro') !== -1; }).length;
+    statClients.textContent = total || '—';
+    statActive.textContent = active || '—';
+    statPro.textContent = pro || '—';
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── FORMAT DATE ────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    var d = new Date(dateStr);
+    return d.toLocaleDateString('fr-CA', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── RENDER TABLE ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function renderTable() {
+    tbody.innerHTML = '';
+
+    if (accounts.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px 20px;color:#8891B8;"><div style="font-size:48px;margin-bottom:12px;opacity:0.5;">📭</div>Aucun compte client</td></tr>';
+      return;
+    }
+
+    accounts.forEach(function(acc, idx) {
+      var products = acc.products || [];
+      var tr = document.createElement('tr');
+      tr.style.transition = 'background .15s';
+
+      // Hover
+      tr.addEventListener('mouseenter', function() { this.style.background = 'rgba(123,92,255,0.05)'; });
+      tr.addEventListener('mouseleave', function() { this.style.background = 'transparent'; });
+
+      var tdStyle = 'padding:12px 16px;font-size:13px;color:#D6D9F0;border-bottom:1px solid rgba(123,92,255,0.1);';
+
+      // Nom
+      var tdName = document.createElement('td');
+      tdName.style.cssText = tdStyle;
+      tdName.innerHTML = '<strong>' + (acc.name || '—') + '</strong>';
+      tr.appendChild(tdName);
+
+      // Courriel
+      var tdEmail = document.createElement('td');
+      tdEmail.style.cssText = tdStyle;
+      tdEmail.textContent = acc.email;
+      tr.appendChild(tdEmail);
+
+      // Mot de passe
+      var tdPwd = document.createElement('td');
+      tdPwd.style.cssText = tdStyle;
+      if (acc.password && acc.password !== '—') {
+        var displayPwd = acc.password.length > 12 ? acc.password.substring(0, 12) + '...' : acc.password;
+        var code = document.createElement('code');
+        code.style.cssText = 'font-family:monospace;font-size:11px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;color:#FFD700;';
+        code.title = acc.password;
+        code.textContent = displayPwd;
+        tdPwd.appendChild(code);
+
+        var copyBtn = document.createElement('button');
+        copyBtn.setAttribute('data-idx', idx);
+        copyBtn.title = 'Copier';
+        copyBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:12px;margin-left:4px;opacity:0.7;transition:opacity .2s;color:#D6D9F0;font-family:"Space Grotesk",sans-serif;';
+        copyBtn.textContent = (copiedIdx === idx) ? '✓' : '📋';
+        copyBtn.addEventListener('click', function() {
+          copyPassword(acc.password, parseInt(this.getAttribute('data-idx')));
+        });
+        tdPwd.appendChild(copyBtn);
+      } else {
+        tdPwd.textContent = '—';
+      }
+      tr.appendChild(tdPwd);
+
+      // Produits
+      var tdProducts = document.createElement('td');
+      tdProducts.style.cssText = tdStyle;
+      if (products.length > 0) {
+        var spanWrap = document.createElement('span');
+        spanWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
+        if (products.indexOf('pro') !== -1) {
+          var badgePro = document.createElement('span');
+          badgePro.style.cssText = 'display:inline-block;padding:4px 10px;border-radius:50px;font-size:10px;font-weight:700;text-transform:uppercase;background:rgba(123,92,255,0.15);color:#7B5CFF;';
+          badgePro.textContent = '🪞 Miroir Pro';
+          spanWrap.appendChild(badgePro);
+        }
+        if (products.indexOf('flipbook') !== -1) {
+          var badgeFlip = document.createElement('span');
+          badgeFlip.style.cssText = 'display:inline-block;padding:4px 10px;border-radius:50px;font-size:10px;font-weight:700;text-transform:uppercase;background:linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,165,0,0.2));color:#FFD700;';
+          badgeFlip.textContent = '📚 Miroir des Aidantes';
+          spanWrap.appendChild(badgeFlip);
+        }
+        tdProducts.appendChild(spanWrap);
+      } else {
+        var badgeNone = document.createElement('span');
+        badgeNone.style.cssText = 'display:inline-block;padding:4px 10px;border-radius:50px;font-size:10px;font-weight:700;text-transform:uppercase;background:rgba(79,163,255,0.15);color:#4FA3FF;';
+        badgeNone.textContent = 'Aucun';
+        tdProducts.appendChild(badgeNone);
+      }
+      tr.appendChild(tdProducts);
+
+      // Statut
+      var tdStatus = document.createElement('td');
+      tdStatus.style.cssText = tdStyle;
+      var isSuspended = acc.status === 'suspended';
+      var statusBadge = document.createElement('span');
+      statusBadge.style.cssText = 'display:inline-block;padding:4px 10px;border-radius:50px;font-size:10px;font-weight:700;text-transform:uppercase;background:' + (isSuspended ? 'rgba(255,82,82,0.15)' : 'rgba(0,230,118,0.15)') + ';color:' + (isSuspended ? '#ff6b6b' : '#00E676') + ';';
+      statusBadge.textContent = isSuspended ? 'Suspendu' : 'Actif';
+      tdStatus.appendChild(statusBadge);
+      tr.appendChild(tdStatus);
+
+      // Créé le
+      var tdDate = document.createElement('td');
+      tdDate.style.cssText = tdStyle;
+      tdDate.textContent = formatDate(acc.createdAt);
+      tr.appendChild(tdDate);
+
+      // Actions
+      var tdActions = document.createElement('td');
+      tdActions.style.cssText = tdStyle;
+      var actionsDiv = document.createElement('div');
+      actionsDiv.style.cssText = 'display:flex;gap:6px;';
+
+      // Edit button
+      var editBtn = document.createElement('button');
+      editBtn.title = 'Modifier';
+      editBtn.style.cssText = 'width:32px;height:32px;border-radius:8px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.4);color:#8891B8;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .2s;font-family:"Space Grotesk",sans-serif;';
+      editBtn.textContent = '✏️';
+      editBtn.addEventListener('mouseenter', function() { this.style.borderColor = '#4FA3FF'; this.style.color = '#4FA3FF'; });
+      editBtn.addEventListener('mouseleave', function() { this.style.borderColor = 'rgba(123,92,255,0.2)'; this.style.color = '#8891B8'; });
+      editBtn.addEventListener('click', function() { openEdit(acc.email); });
+      actionsDiv.appendChild(editBtn);
+
+      // Delete button
+      var delBtn = document.createElement('button');
+      delBtn.title = 'Supprimer';
+      delBtn.style.cssText = 'width:32px;height:32px;border-radius:8px;border:1px solid rgba(123,92,255,0.2);background:rgba(15,28,63,0.4);color:#8891B8;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .2s;font-family:"Space Grotesk",sans-serif;';
+      delBtn.textContent = '🗑️';
+      delBtn.addEventListener('mouseenter', function() { this.style.borderColor = '#ff6b6b'; this.style.color = '#ff6b6b'; });
+      delBtn.addEventListener('mouseleave', function() { this.style.borderColor = 'rgba(123,92,255,0.2)'; this.style.color = '#8891B8'; });
+      delBtn.addEventListener('click', function() { openDelete(acc.email, acc.name || acc.email); });
+      actionsDiv.appendChild(delBtn);
+
+      tdActions.appendChild(actionsDiv);
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── COPY PASSWORD ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function copyPassword(pwd, idx) {
+    navigator.clipboard.writeText(pwd).then(function() {
+      copiedIdx = idx;
+      renderTable();
+      setTimeout(function() {
+        copiedIdx = null;
+        renderTable();
+      }, 1200);
+    }).catch(function() {});
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── CREATE ACCOUNT ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  createForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    var fname = newFirstname.value.trim();
+    var lname = newLastname.value.trim();
+    var email = newEmail.value.trim().toLowerCase();
+    var pwd = newPassword.value;
+
+    if (!fname || !lname || !email || !pwd) {
+      showError('Tous les champs sont requis');
+      return;
+    }
+
+    var products = [];
+    if (newPro.checked) products.push('pro');
+    if (newFlipbook.checked) products.push('flipbook');
+    if (products.length === 0) {
+      showError('Sélectionnez au moins un produit');
+      return;
+    }
+    if (pwd.length < 6) {
+      showError('Le mot de passe doit avoir au moins 6 caractères');
+      return;
+    }
+
+    // Check duplicate email
+    if (accounts.find(function(a) { return a.email === email; })) {
+      showError('Un compte avec ce courriel existe déjà');
+      return;
+    }
+
+    var productNames = products.map(function(p) { return p === 'pro' ? 'Miroir Pro' : 'Miroir des Aidantes'; }).join(' + ');
+
+    accounts.push({
+      email: email,
+      name: fname + ' ' + lname,
+      password: pwd,
+      products: products,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    });
+
+    saveAccounts();
+    showSuccess('Compte créé avec succès pour ' + fname + ' ' + lname + ' (' + productNames + ')');
+
+    // Reset form
+    newFirstname.value = '';
+    newLastname.value = '';
+    newEmail.value = '';
+    newPassword.value = '';
+    newPro.checked = false;
+    newFlipbook.checked = false;
+    updateCheckboxBg();
+
+    refreshData();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── RESET FORM ────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  resetBtn.addEventListener('click', function() {
+    newFirstname.value = '';
+    newLastname.value = '';
+    newEmail.value = '';
+    newPassword.value = '';
+    newPro.checked = false;
+    newFlipbook.checked = false;
+    updateCheckboxBg();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── CHECKBOX BG TOGGLE ──────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function updateCheckboxBg() {
+    newProLabel.style.background = newPro.checked ? 'rgba(123,92,255,0.2)' : 'rgba(123,92,255,0.1)';
+    newFlipLabel.style.background = newFlipbook.checked ? 'rgba(123,92,255,0.2)' : 'rgba(123,92,255,0.1)';
+    editProLabel.style.background = editPro.checked ? 'rgba(123,92,255,0.2)' : 'rgba(123,92,255,0.1)';
+    editFlipLabel.style.background = editFlipbook.checked ? 'rgba(123,92,255,0.2)' : 'rgba(123,92,255,0.1)';
+  }
+
+  newPro.addEventListener('change', updateCheckboxBg);
+  newFlipbook.addEventListener('change', updateCheckboxBg);
+  editPro.addEventListener('change', updateCheckboxBg);
+  editFlipbook.addEventListener('change', updateCheckboxBg);
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── PASSWORD TOGGLE ──────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  newPwdToggle.addEventListener('click', function() {
+    newPwdVisible = !newPwdVisible;
+    newPassword.type = newPwdVisible ? 'text' : 'password';
+    this.textContent = newPwdVisible ? '🙈' : '👁️';
+  });
+
+  editPwdToggle.addEventListener('click', function() {
+    editPwdVisible = !editPwdVisible;
+    editPassword.type = editPwdVisible ? 'text' : 'password';
+    this.textContent = editPwdVisible ? '🙈' : '👁️';
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── REFRESH ──────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function refreshData() {
+    loadAccounts();
+    updateStats();
+    renderTable();
+  }
+
+  refreshBtn.addEventListener('click', refreshData);
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── EDIT MODAL ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function openEdit(email) {
+    var acc = accounts.find(function(a) { return a.email === email; });
+    if (!acc) return;
+
+    var nameParts = (acc.name || '').split(' ');
+    editFirstname.value = nameParts[0] || '';
+    editLastname.value = nameParts.slice(1).join(' ') || '';
+    editEmail.value = acc.email;
+    editPassword.value = acc.password || '';
+    editStatus.value = acc.status || 'active';
+
+    var products = acc.products || [];
+    editPro.checked = products.indexOf('pro') !== -1;
+    editFlipbook.checked = products.indexOf('flipbook') !== -1;
+    updateCheckboxBg();
+
+    editOriginalEmail = acc.email;
+    editModal.style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    editModal.style.display = 'none';
+  }
+
+  editCloseBtn.addEventListener('click', closeEditModal);
+  cancelEditBtn.addEventListener('click', closeEditModal);
+  editModal.addEventListener('click', function(e) {
+    if (e.target === editModal) closeEditModal();
+  });
+
+  editForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    var products = [];
+    if (editPro.checked) products.push('pro');
+    if (editFlipbook.checked) products.push('flipbook');
+    if (products.length === 0) {
+      showError('Sélectionnez au moins un produit');
+      return;
+    }
+
+    var idx = accounts.findIndex(function(a) { return a.email === editOriginalEmail; });
+    if (idx === -1) {
+      showError('Compte introuvable');
+      return;
+    }
+
+    var newEmail = editEmail.value.trim().toLowerCase();
+
+    // Check duplicate email if changed
+    if (newEmail.toLowerCase() !== editOriginalEmail.toLowerCase()) {
+      if (accounts.find(function(a) { return a.email === newEmail; })) {
+        showError('Un compte avec ce courriel existe déjà');
+        return;
+      }
+    }
+
+    accounts[idx].name = editFirstname.value.trim() + ' ' + editLastname.value.trim();
+    accounts[idx].email = newEmail;
+    accounts[idx].status = editStatus.value;
+    accounts[idx].products = products;
+    if (editPassword.value) {
+      accounts[idx].password = editPassword.value;
+    }
+
+    saveAccounts();
+    showSuccess('Compte modifié avec succès');
+    closeEditModal();
+    refreshData();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── DELETE MODAL ─────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  function openDelete(email, name) {
+    deleteTargetEmail = email;
+    deleteTargetName = name || email;
+    deleteNameDisplay.textContent = deleteTargetName;
+    deleteModal.style.display = 'flex';
+  }
+
+  function closeDeleteModal() {
+    deleteModal.style.display = 'none';
+  }
+
+  deleteCloseBtn.addEventListener('click', closeDeleteModal);
+  cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+  deleteModal.addEventListener('click', function(e) {
+    if (e.target === deleteModal) closeDeleteModal();
+  });
+
+  confirmDeleteBtn.addEventListener('click', function() {
+    accounts = accounts.filter(function(a) { return a.email !== deleteTargetEmail; });
+    saveAccounts();
+    showSuccess('Compte supprimé avec succès');
+    closeDeleteModal();
+    refreshData();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── LOGOUT ───────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  document.getElementById('logout-btn').addEventListener('click', function() {
+    window.location.href = 'login.html';
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── INPUT FOCUS STYLES ──────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], select').forEach(function(el) {
+    el.addEventListener('focus', function() {
+      this.style.borderColor = 'rgba(123,92,255,0.5)';
+    });
+    el.addEventListener('blur', function() {
+      this.style.borderColor = 'rgba(123,92,255,0.2)';
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── BUTTON HOVER EFFECTS ────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  createBtn.addEventListener('mouseenter', function() {
+    this.style.transform = 'translateY(-1px)';
+    this.style.boxShadow = '0 0 30px rgba(123,92,255,0.5)';
+  });
+  createBtn.addEventListener('mouseleave', function() {
+    this.style.transform = 'none';
+    this.style.boxShadow = '0 0 20px rgba(123,92,255,0.3)';
+  });
+
+  saveEditBtn.addEventListener('mouseenter', function() {
+    this.style.transform = 'translateY(-1px)';
+    this.style.boxShadow = '0 0 30px rgba(123,92,255,0.5)';
+  });
+  saveEditBtn.addEventListener('mouseleave', function() {
+    this.style.transform = 'none';
+    this.style.boxShadow = '0 0 20px rgba(123,92,255,0.3)';
+  });
+
+  confirmDeleteBtn.addEventListener('mouseenter', function() {
+    this.style.transform = 'translateY(-1px)';
+    this.style.boxShadow = '0 0 30px rgba(255,82,82,0.5)';
+  });
+  confirmDeleteBtn.addEventListener('mouseleave', function() {
+    this.style.transform = 'none';
+    this.style.boxShadow = '0 0 20px rgba(255,82,82,0.3)';
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── INIT ─────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  refreshData();
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── STARFIELD ANIMATION (from starry-background.tsx) ────
+  // ═══════════════════════════════════════════════════════════
+  (function() {
+    var canvas = document.getElementById('starry-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    var stars = [];
+    var shootingStars = [];
+    var nebulae = [];
+    var animationId;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initStars();
+    }
+
+    function initStars() {
+      var count = Math.floor((canvas.width * canvas.height) / 2800);
+      stars = [];
+
+      var colors = [
+        'rgba(167, 139, 250,',
+        'rgba(79, 163, 255,',
+        'rgba(255, 255, 255,',
+        'rgba(244, 200, 66,',
+        'rgba(123, 92, 255,'
+      ];
+
+      for (var i = 0; i < count; i++) {
+        var colorIdx = Math.random() < 0.03 ? 3 : Math.floor(Math.random() * 3);
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 2.2 + 0.3,
+          opacity: Math.random() * 0.7 + 0.3,
+          twinkleSpeed: Math.random() * 0.03 + 0.005,
+          twinklePhase: Math.random() * Math.PI * 2,
+          color: colors[colorIdx]
+        });
+      }
+
+      nebulae = [];
+      var nebulaCount = Math.floor(Math.random() * 3) + 2;
+      for (var j = 0; j < nebulaCount; j++) {
+        nebulae.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 200 + 100,
+          color1: 'rgba(' + (Math.random() < 0.5 ? '123, 92, 255' : '79, 163, 255') + ', ',
+          color2: 'rgba(' + (Math.random() < 0.5 ? '90, 108, 255' : '167, 139, 250') + ', ',
+          phase: Math.random() * Math.PI * 2,
+          speed: Math.random() * 0.002 + 0.001
+        });
+      }
+    }
+
+    function drawNebulae(time) {
+      nebulae.forEach(function(n) {
+        var pulse = Math.sin(time * n.speed + n.phase) * 0.5 + 0.5;
+        var radius = n.radius * (0.8 + pulse * 0.4);
+        var gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, radius);
+        gradient.addColorStop(0, n.color1 + (0.04 + pulse * 0.02) + ')');
+        gradient.addColorStop(0.5, n.color2 + (0.02 + pulse * 0.01) + ')');
+        gradient.addColorStop(1, 'rgba(10, 22, 40, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(n.x - radius, n.y - radius, radius * 2, radius * 2);
+      });
+    }
+
+    function drawStars(time) {
+      stars.forEach(function(star) {
+        var twinkle = Math.sin(time * star.twinkleSpeed + star.twinklePhase) * 0.5 + 0.5;
+        var currentOpacity = star.opacity * (0.4 + twinkle * 0.6);
+
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fillStyle = star.color + currentOpacity + ')';
+        ctx.fill();
+
+        if (star.size > 1.4) {
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.size * 3, 0, Math.PI * 2);
+          ctx.fillStyle = star.color + (currentOpacity * 0.08) + ')';
+          ctx.fill();
+        }
+      });
+    }
+
+    function spawnShootingStar() {
+      if (shootingStars.length > 2) return;
+      if (Math.random() > 0.003) return;
+      shootingStars.push({
+        x: Math.random() * canvas.width * 0.8,
+        y: Math.random() * canvas.height * 0.4,
+        length: Math.random() * 80 + 40,
+        speed: Math.random() * 4 + 3,
+        angle: Math.PI / 6 + Math.random() * 0.3,
+        opacity: 1,
+        life: 0,
+        maxLife: 60 + Math.random() * 40
+      });
+    }
+
+    function drawShootingStars() {
+      shootingStars = shootingStars.filter(function(s) { return s.life < s.maxLife; });
+      shootingStars.forEach(function(s) {
+        s.x += Math.cos(s.angle) * s.speed;
+        s.y += Math.sin(s.angle) * s.speed;
+        s.life++;
+        s.opacity = 1 - s.life / s.maxLife;
+
+        var tailX = s.x - Math.cos(s.angle) * s.length;
+        var tailY = s.y - Math.sin(s.angle) * s.length;
+
+        var gradient = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
+        gradient.addColorStop(0, 'rgba(167, 139, 250, 0)');
+        gradient.addColorStop(0.7, 'rgba(167, 139, 250, ' + (s.opacity * 0.4) + ')');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, ' + s.opacity + ')');
+
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.lineTo(s.x, s.y);
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, ' + s.opacity + ')';
+        ctx.fill();
+      });
+    }
+
+    function animate(time) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      var bg = ctx.createRadialGradient(
+        canvas.width * 0.3, canvas.height * 0.2, 0,
+        canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.8
+      );
+      bg.addColorStop(0, 'rgba(15, 28, 63, 0.15)');
+      bg.addColorStop(0.5, 'rgba(10, 22, 40, 0.1)');
+      bg.addColorStop(1, 'rgba(10, 22, 40, 0)');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawNebulae(time);
+      drawStars(time);
+      spawnShootingStar();
+      drawShootingStars();
+
+      animationId = requestAnimationFrame(animate);
+    }
+
+    resize();
+    animationId = requestAnimationFrame(animate);
+    window.addEventListener('resize', resize);
+  })();
+
+})();
+</script>
+</body>
+</html>

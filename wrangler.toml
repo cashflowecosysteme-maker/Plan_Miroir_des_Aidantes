@@ -1,0 +1,17 @@
+name = "nyxia"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespace pour stocker les comptes clients
+# Créez-le avec : wrangler kv:namespace create "NYXIA_KV"
+# Puis collez l'ID ici
+[[kv_namespaces]]
+binding = "NYXIA_KV"
+id = "VOTRE_KV_NAMESPACE_ID_ICI"
+
+# Variables d'environnement (optionnel)
+# [vars]
+# ADMIN_PASSWORD = "votre_mot_de_passe_admin"
+
+# Secrets (ne jamais les mettre dans ce fichier)
+# Définissez-les avec : wrangler secret put OPENAI_API_KEY

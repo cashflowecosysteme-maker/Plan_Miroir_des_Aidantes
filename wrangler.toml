@@ -11,7 +11,7 @@ id = "9ada61c24ee0425899c14832a6be01e2"
 
 # Variables d'environnement (optionnel)
 # [vars]
-# ADMIN_PASSWORD = "votre_mot_de_passe_admin"  # optionnel : vous pouvez aussi utiliser wrangler secret put ADMIN_PASSWORD
+# ADMIN_PASSWORD = "NyXiaAdmin2026!"  # optionnel : vous pouvez aussi utiliser wrangler secret put ADMIN_PASSWORD
 
 # Secrets (ne jamais les mettre dans ce fichier)
 # Définissez-les avec : wrangler secret put OPENROUTER_API_KEY

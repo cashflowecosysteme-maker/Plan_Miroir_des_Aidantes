@@ -124,7 +124,7 @@
 
   <canvas id="starry-canvas"></canvas>
   <audio id="nyxia-audio" src="/NyXiaVoix-RobotParfait1.mp3" preload="auto"></audio>
-   <audio id="diane-audio" src="/DianeMessage.mp3" preload="auto"></audio>
+
   <header>
     <div class="header-brand">
       <img src="/NyXia.png" alt="NyXia">
@@ -193,8 +193,8 @@
               <div class="chat-header-name">NyXia IA</div>
               <div class="chat-header-sub">Ton accompagnatrice réflexive · Miroir du Praticien™</div>
             </div>
-           <button class="btn-speak" id="btn-speak" onclick="var a=document.getElementById('diane-audio');if(a.paused){a.play();this.textContent='⏸ Pause';this.classList.add('speaking')}else{a.pause();a.currentTime=0;this.textContent='🔊 Écouter Diane';this.classList.remove('speaking')}">🔊 Écouter Diane</button>
-                </div>
+            <button class="btn-speak" id="btn-speak" onclick="toggleSpeak()">🔊 Écouter NyXia</button>
+          </div>
           <div class="chat-messages" id="chat-messages"></div>
           <div class="suggestions" id="suggestions">
             <button class="sugg-btn" onclick="sendSuggestion(&quot;J'ai besoin de prendre du recul&quot;)">🪞 J'ai besoin de prendre du recul</button>
@@ -397,7 +397,7 @@
     function addBotMessage(text) {
       var msgs = document.getElementById('chat-messages')
       var div = document.createElement('div'); div.className = 'msg bot'
-      var avatar = document.createElement('img'); avatar.src = '/NyXia.png'; avatar.className = 'msg-avatar'; avatar.alt = 'NyXia'
+      // Pas d'avatar devant les messages
       var wrapper = document.createElement('div'); wrapper.style.cssText = 'display:flex;flex-direction:column;gap:4px;max-width:100%'
 
       var imgRegex = /\[IMAGE\s*:\s*([\s\S]*?)\]/i
@@ -463,7 +463,7 @@
       pdfBtn.addEventListener('click', function() { var w = window.open('', '_blank'); if (!w) return; var body = '<h2 style="color:#7B5CFF">NyXia IA</h2>' + escHtml(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); w.document.write('<!DOCTYPE html><html><head><title>NyXia</title><style>body{font-family:Georgia,serif;max-width:760px;margin:48px auto;line-height:1.85}</style></head><body>' + body + '</body></html>'); w.document.close(); setTimeout(function() { w.print() }, 300) }); acts.appendChild(pdfBtn)
 
       wrapper.appendChild(acts)
-      div.appendChild(avatar); div.appendChild(wrapper)
+      div.appendChild(wrapper)
       msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight
     }
 
@@ -492,7 +492,7 @@
       }
       window.speechSynthesis.cancel()
       document.querySelectorAll('.msg button').forEach(function(b) { if (b._nxSpeaking) { b._nxSpeaking = false; b.textContent = '🔊 Écouter'; b.style.borderColor = 'rgba(123,92,255,0.15)'; b.style.color = 'var(--t4)'; b.style.background = 'rgba(123,92,255,0.04)' } })
-      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶]/g, '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').trim()
+      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶🪞🌿🕯️🌙✨💎📖]/g, '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').trim()
       if (!clean) return
       btn._nxSpeaking = true; btn.textContent = '⏹ Arrêter'; btn.style.borderColor = 'rgba(0,230,118,0.4)'; btn.style.color = '#00E676'; btn.style.background = 'rgba(0,230,118,0.08)'
       var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
@@ -509,7 +509,7 @@
 
     function speakText(text) {
       if (!window.speechSynthesis) return; window.speechSynthesis.cancel()
-      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶]/g, '').replace(/<br>/g, ' ').trim()
+      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶🪞🌿🕯️🌙✨💎📖]/g, '').replace(/<br>/g, ' ').trim()
       if (!clean) return
       var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
       function trySpeak() { var voice = pickBestFrenchVoice(window.speechSynthesis.getVoices()); if (voice) utt.voice = voice; window.speechSynthesis.speak(utt) }

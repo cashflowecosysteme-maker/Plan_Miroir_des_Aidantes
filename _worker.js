@@ -347,9 +347,7 @@ async function handleChat(request, env, headers) {
   Phrase clé : "${e.phrase}"
   Étapes : ${e.etapes}
   Durée : ${e.duree}`
-        ).join('
-
-');
+        ).join('\n\n');
         messages.push({
           role: 'system',
           content: `EXERCICES MIROIR DISPONIBLES pour ce contexte (utilise-les seulement quand la personne est prête, jamais trop tôt) :

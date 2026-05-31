@@ -193,7 +193,7 @@
               <div class="chat-header-name">NyXia IA</div>
               <div class="chat-header-sub">Ton accompagnatrice réflexive · Miroir du Praticien™</div>
             </div>
-            <button class="btn-speak" id="btn-speak" onclick="toggleSpeak()">🔊 Écouter NyXia</button>
+           <button class="btn-speak" id="btn-speak" onclick="var a=document.getElementById('diane-audio');if(a.paused){a.play();this.textContent='⏸ Pause';this.classList.add('speaking')}else{a.pause();a.currentTime=0;this.textContent='🔊 Écouter Diane';this.classList.remove('speaking')}">🔊 Écouter Diane</button>
           </div>
           <div class="chat-messages" id="chat-messages"></div>
           <div class="suggestions" id="suggestions">

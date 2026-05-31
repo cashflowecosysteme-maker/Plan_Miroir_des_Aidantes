@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sommeil & Récupération — NyXia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --p:#4a3a8a; --p2:#6B5CCC; --p3:#9b8fd4; }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; overflow:hidden; background:#03050f; font-family:'Outfit',sans-serif; color:#fff; }
+
+    .bg {
+      position:fixed; inset:0; z-index:0;
+      background:
+        radial-gradient(ellipse 90% 70% at 50% 40%, rgba(30,15,80,0.7) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 50% at 70% 90%, rgba(20,8,60,0.5) 0%, transparent 60%),
+        #03050f;
+    }
+
+    /* Étoiles fixes */
+    .stars { position:fixed; inset:0; z-index:1; pointer-events:none; }
+    .star { position:absolute; background:#fff; border-radius:50%; animation:twinkle linear infinite; }
+    @keyframes twinkle {
+      0%,100% { opacity:0.1; } 50% { opacity:0.7; }
+    }
+
+    /* Particules douces */
+    .particles { position:fixed; inset:0; z-index:2; pointer-events:none; overflow:hidden; }
+    .particle { position:absolute; border-radius:50%; opacity:0; animation:floatUp linear infinite; }
+    @keyframes floatUp {
+      0% { opacity:0; transform:translateY(0) scale(0); }
+      15% { opacity:0.4; }
+      85% { opacity:0.1; }
+      100% { opacity:0; transform:translateY(-100vh) scale(1.5); }
+    }
+
+    .scene {
+      position:relative; z-index:3; width:100%; height:100vh;
+      display:flex; align-items:center; justify-content:center;
+    }
+
+    /* NyXia — centrée et plus grande car allongée */
+    .nyxia-side {
+      position:relative; flex-shrink:0; width:520px; height:100vh;
+      display:flex; align-items:flex-end; justify-content:center;
+      padding-bottom:40px;
+      animation:nyxiaIn 1.5s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes nyxiaIn { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:none; } }
+
+    .nyxia-glow {
+      position:absolute; bottom:30px; left:50%;
+      transform:translateX(-50%);
+      width:480px; height:340px;
+      background:radial-gradient(ellipse 80% 60% at 50% 70%,
+        rgba(75,55,170,0.5) 0%, rgba(100,80,200,0.25) 35%,
+        rgba(40,20,100,0.1) 60%, transparent 75%);
+      filter:blur(30px);
+      animation:glowSleep 5s ease-in-out infinite;
+      z-index:1;
+    }
+    @keyframes glowSleep {
+      0%,100% { opacity:0.7; transform:translateX(-50%) scale(1); }
+      50% { opacity:1; transform:translateX(-50%) scale(1.04); }
+    }
+
+    .nyxia-bed-glow {
+      position:absolute; bottom:20px; left:50%;
+      transform:translateX(-50%);
+      width:440px; height:50px;
+      background:radial-gradient(ellipse 100% 100% at 50% 100%, rgba(75,55,170,0.6), transparent 70%);
+      filter:blur(20px); border-radius:50%; z-index:0;
+      animation:glowSleep 5s ease-in-out infinite;
+    }
+
+    .nyxia-img {
+      position:relative; z-index:2;
+      width:90%; max-width:480px;
+      object-fit:contain;
+      filter:drop-shadow(0 0 50px rgba(75,55,170,0.6)) drop-shadow(0 10px 40px rgba(100,80,200,0.3));
+      animation:sleepFloat 6s ease-in-out infinite;
+    }
+    @keyframes sleepFloat {
+      0%,100% { transform:translateY(0px); }
+      50% { transform:translateY(-8px); }
+    }
+
+    .content-side {
+      flex:1; max-width:440px; padding:0 40px;
+      animation:contentIn 1.6s cubic-bezier(0.22,1,0.36,1) 0.3s both;
+    }
+    @keyframes contentIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:none; } }
+
+    .eyebrow { font-size:11px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--p3); margin-bottom:16px; opacity:0.8; }
+
+    .title { font-family:'Cormorant Garamond',serif; font-size:clamp(32px,4.5vw,50px); font-weight:300; line-height:1.15; color:#fff; margin-bottom:16px; }
+    .title em { font-style:italic; background:linear-gradient(135deg,#c4b5fd,#9b8fd4,#7B6FCC); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+    .subtitle { font-size:14px; color:rgba(200,195,240,0.6); line-height:1.9; margin-bottom:36px; font-weight:300; max-width:360px; }
+
+    .btn-glass {
+      position:relative; display:inline-flex; align-items:center; gap:14px;
+      padding:16px 36px; border-radius:60px; text-decoration:none;
+      font-family:'Outfit',sans-serif; font-size:15px; font-weight:600; color:#e8e0ff;
+      cursor:pointer; border:1px solid rgba(155,143,212,0.3);
+      background:rgba(75,55,170,0.1);
+      backdrop-filter:blur(20px) saturate(1.5);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.4), 0 0 40px rgba(75,55,170,0.2);
+      transition:all 0.4s cubic-bezier(0.22,1,0.36,1); overflow:hidden;
+    }
+    .btn-glass::before { content:''; position:absolute; top:0; left:0; right:0; height:50%; background:linear-gradient(to bottom,rgba(255,255,255,0.06),transparent); border-radius:60px 60px 0 0; pointer-events:none; }
+    .btn-glass::after { content:''; position:absolute; top:-50%; left:-60%; width:40%; height:200%; background:linear-gradient(105deg,transparent,rgba(255,255,255,0.1),transparent); transform:skewX(-15deg); transition:left 0.6s ease; pointer-events:none; }
+    .btn-glass:hover::after { left:130%; }
+    .btn-glass:hover { background:rgba(75,55,170,0.2); border-color:rgba(155,143,212,0.55); box-shadow:0 0 0 4px rgba(75,55,170,0.1), 0 0 60px rgba(75,55,170,0.4); transform:translateY(-2px) scale(1.015); }
+
+    .btn-icon { font-size:20px; filter:drop-shadow(0 0 8px rgba(155,143,212,0.8)); flex-shrink:0; }
+    .btn-text-wrap { display:flex; flex-direction:column; align-items:flex-start; gap:1px; }
+    .btn-label { font-size:15px; font-weight:600; }
+    .btn-sub { font-size:11px; font-weight:400; color:rgba(200,195,240,0.55); letter-spacing:0.5px; }
+    .btn-arrow { margin-left:auto; font-size:16px; opacity:0.5; transition:transform 0.3s ease, opacity 0.3s ease; }
+    .btn-glass:hover .btn-arrow { transform:translateX(4px); opacity:0.9; }
+
+    .badge-wrap { display:flex; align-items:center; gap:10px; margin-top:22px; flex-wrap:wrap; }
+    .badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:50px; font-size:11px; font-weight:500; color:rgba(200,195,240,0.55); border:1px solid rgba(75,55,170,0.2); background:rgba(75,55,170,0.06); }
+    .badge::before { content:''; width:4px; height:4px; border-radius:50%; background:var(--dot-color,#9b8fd4); flex-shrink:0; }
+
+    @media(max-width:900px) {
+      .scene { flex-direction:column; justify-content:flex-end; }
+      .nyxia-side { width:100%; height:48vh; padding-bottom:0; align-items:center; }
+      .nyxia-img { width:70%; max-width:360px; }
+      .content-side { padding:0 24px 40px; text-align:center; max-width:100%; }
+      .subtitle { margin:0 auto 28px; }
+      .badge-wrap { justify-content:center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="particles" id="particles"></div>
+
+  <div class="scene">
+    <div class="nyxia-side">
+      <div class="nyxia-glow"></div>
+      <div class="nyxia-bed-glow"></div>
+      <img src="/NyXia_-_Sommeil_et_récupération.png" alt="NyXia — Sommeil & Récupération" class="nyxia-img">
+    </div>
+    <div class="content-side">
+      <div class="eyebrow">🌙 Repos & Régénération</div>
+      <h1 class="title">Sommeil &<br><em>Récupération</em></h1>
+      <p class="subtitle">
+        Ton système nerveux a le droit de se poser.<br>
+        NyXia t'accompagne vers le repos — avec douceur,<br>
+        sans forcer, sans performance. 🕯️<br><br>
+        Dis-lui ce qui t'empêche de dormir.<br>
+        Elle est là, dans le silence du soir.
+      </p>
+      <button class="btn-glass" onclick="sendToNyXia()">
+        <span class="btn-icon">🌙</span>
+        <span class="btn-text-wrap">
+          <span class="btn-label">Parler à NyXia ce soir</span>
+          <span class="btn-sub">Rituel du soir · Récupération profonde</span>
+        </span>
+        <span class="btn-arrow">→</span>
+      </button>
+      <div class="badge-wrap">
+        <span class="badge" style="--dot-color:#9b8fd4">🌙 Mode Sommeil</span>
+        <span class="badge" style="--dot-color:#F4C842">✦ Plan Miroir des Aidantes</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Étoiles
+    const starsEl = document.getElementById('stars');
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2 + 0.5;
+      s.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${Math.random()*4+2}s;animation-delay:${Math.random()*5}s;`;
+      starsEl.appendChild(s);
+    }
+
+    // Particules douces
+    const container = document.getElementById('particles');
+    const colors = ['#9b8fd4','#7B6FCC','#c4b5fd','#e9d5ff'];
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = Math.random() * 2.5 + 0.5;
+      p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;bottom:${Math.random()*-10}%;animation-duration:${Math.random()*16+12}s;animation-delay:${Math.random()*15}s;`;
+      p.style.background = colors[Math.floor(Math.random()*colors.length)];
+      container.appendChild(p);
+    }
+
+    function sendToNyXia() {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'nyxia_suggest', text: 'Je veux parler de mon sommeil et de ma récupération. J\'ai du mal à me reposer vraiment.' }, '*');
+      }
+    }
+  </script>
+</body>
+</html>

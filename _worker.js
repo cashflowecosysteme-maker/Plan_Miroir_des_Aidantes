@@ -233,7 +233,8 @@ export default {
         return withAdminAuth(request, env, corsHeaders, handleAdminStats);
       }
 
-      return jsonResponse({ error: 'Route non trouvée' }, corsHeaders, 404);
+      // ═══ TOUT LE RESTE → laisser Cloudflare Pages servir les fichiers statiques ═══
+      return env.ASSETS.fetch(request);
 
     } catch (err) {
       console.error('Worker error:', err);
@@ -248,7 +249,7 @@ export default {
 async function verifyAdminToken(request, env) {
   const authHeader = request.headers.get('X-Admin-Token');
   if (!authHeader) return false;
-  const sessionData = await env.NYXIA_KV.get('admin_session_' + authHeader);
+  const sessionData = await env.Miroir_des_Aidantes.get('admin_session_' + authHeader);
   return sessionData === 'true';
 }
 
@@ -363,7 +364,7 @@ async function handleClientLogin(request, env, headers) {
   }
 
   const token = crypto.randomUUID();
-  await env.NYXIA_KV.put('session_' + token, JSON.stringify({
+  await env.Miroir_des_Aidantes.put('session_' + token, JSON.stringify({
     id: client.id,
     email: client.email,
     firstName: client.firstName,
@@ -396,7 +397,7 @@ async function handleCheckAuth(request, env, headers) {
   const { token } = body;
   if (!token) return jsonResponse({ valid: false }, headers);
 
-  const sessionData = await env.NYXIA_KV.get('session_' + token);
+  const sessionData = await env.Miroir_des_Aidantes.get('session_' + token);
   if (!sessionData) return jsonResponse({ valid: false }, headers);
 
   const session = JSON.parse(sessionData);
@@ -407,7 +408,7 @@ async function handleLogout(request, env, headers) {
   let body;
   try { body = await request.json(); } catch(e) { return jsonResponse({ success: true }, headers); }
   const { token } = body;
-  if (token) await env.NYXIA_KV.delete('session_' + token);
+  if (token) await env.Miroir_des_Aidantes.delete('session_' + token);
   return jsonResponse({ success: true }, headers);
 }
 
@@ -429,12 +430,12 @@ async function handleAdminLogin(request, env, headers) {
 
   // Priorité : 1) Secret Cloudflare ADMIN_PASSWORD, 2) KV 'admin_password', 3) fallback
   const adminPass = env.ADMIN_PASSWORD
-    || await env.NYXIA_KV.get('admin_password')
+    || await env.Miroir_des_Aidantes.get('admin_password')
     || 'NyXiaAdmin2026!';
 
   if (password === adminPass) {
     const token = crypto.randomUUID();
-    await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 }); // 4h
+    await env.Miroir_des_Aidantes.put('admin_session_' + token, 'true', { expirationTtl: 14400 }); // 4h
     return jsonResponse({ success: true, token: token }, headers);
   }
   return jsonResponse({ error: 'Mot de passe incorrect' }, headers, 401);
@@ -462,7 +463,7 @@ async function handleAdminChangePassword(request, env, headers) {
 
   // Vérifier le mot de passe actuel
   const adminPass = env.ADMIN_PASSWORD
-    || await env.NYXIA_KV.get('admin_password')
+    || await env.Miroir_des_Aidantes.get('admin_password')
     || 'NyXiaAdmin2026!';
 
   if (currentPassword !== adminPass) {
@@ -471,7 +472,7 @@ async function handleAdminChangePassword(request, env, headers) {
 
   // Sauvegarder le nouveau mot de passe dans KV
   // (NB: si ADMIN_PASSWORD est défini comme secret Cloudflare, il faudra aussi le mettre à jour via wrangler)
-  await env.NYXIA_KV.put('admin_password', newPassword);
+  await env.Miroir_des_Aidantes.put('admin_password', newPassword);
 
   return jsonResponse({ success: true, message: 'Mot de passe administrateur modifié avec succès' }, headers);
 }
@@ -636,12 +637,12 @@ async function handleAdminStats(request, env, headers) {
 //  HELPERS
 // ============================================================
 async function getClients(env) {
-  const data = await env.NYXIA_KV.get('clients');
+  const data = await env.Miroir_des_Aidantes.get('clients');
   return data ? JSON.parse(data) : [];
 }
 
 async function saveClients(env, clients) {
-  await env.NYXIA_KV.put('clients', JSON.stringify(clients));
+  await env.Miroir_des_Aidantes.put('clients', JSON.stringify(clients));
 }
 
 // FIX : jsonResponse correctement séparé status des headers CORS

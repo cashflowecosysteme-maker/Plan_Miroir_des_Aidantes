@@ -407,9 +407,9 @@
 
       var bubble = document.createElement('div'); bubble.className = 'msg-bubble'
       if (textWithoutImg) {
-        bubble.innerHTML = escHtml(textWithoutImg).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
+        bubble.innerHTML = cleanMarkdown(escHtml(textWithoutImg)).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
       } else if (!imgDesc) {
-        bubble.innerHTML = escHtml(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
+        bubble.innerHTML = cleanMarkdown(escHtml(text)).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
       }
       wrapper.appendChild(bubble)
 
@@ -492,7 +492,7 @@
       }
       window.speechSynthesis.cancel()
       document.querySelectorAll('.msg button').forEach(function(b) { if (b._nxSpeaking) { b._nxSpeaking = false; b.textContent = '🔊 Écouter'; b.style.borderColor = 'rgba(123,92,255,0.15)'; b.style.color = 'var(--t4)'; b.style.background = 'rgba(123,92,255,0.04)' } })
-      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶🪞🌿🕯️🌙✨💎📖]/g, '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').trim()
+      var clean = cleanForSpeech(text)
       if (!clean) return
       btn._nxSpeaking = true; btn.textContent = '⏹ Arrêter'; btn.style.borderColor = 'rgba(0,230,118,0.4)'; btn.style.color = '#00E676'; btn.style.background = 'rgba(0,230,118,0.08)'
       var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
@@ -509,7 +509,7 @@
 
     function speakText(text) {
       if (!window.speechSynthesis) return; window.speechSynthesis.cancel()
-      var clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\[IMAGE[\s\S]*?\]/gi, '').replace(/[✦💜🚀💎🌐📱⭐✓►▶🪞🌿🕯️🌙✨💎📖]/g, '').replace(/<br>/g, ' ').trim()
+      var clean = cleanForSpeech(text)
       if (!clean) return
       var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
       function trySpeak() { var voice = pickBestFrenchVoice(window.speechSynthesis.getVoices()); if (voice) utt.voice = voice; window.speechSynthesis.speak(utt) }
@@ -552,6 +552,29 @@
     chatInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px' })
     chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } })
 
+    function cleanMarkdown(str) {
+      return str
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/^---+$/gm, '')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/^[-*]\s+/gm, '')
+        .replace(/`([^`]+)`/g, '$1')
+        .trim()
+    }
+    function cleanForSpeech(str) {
+      return str
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/---+/g, '')
+        .replace(/#{1,6}\s+/g, '')
+        .replace(/\[IMAGE[\s\S]*?\]/gi, '')
+        .replace(/[✦💜🚀💎🌐📱⭐✓►▶🪞🌿🕯️🌙✨💎📖]/g, '')
+        .replace(/<br>/g, ' ')
+        .replace(/<[^>]+>/g, '')
+        .replace(/`([^`]+)`/g, '$1')
+        .trim()
+    }
     function escHtml(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML }
   </script>
 </body>

@@ -224,51 +224,31 @@
         </div>
       </div>
 
-      <!-- Panel Exercices Neuro-Alchimiques -->
-      <div class="panel" id="panel-neuro" style="align-items:center;justify-content:center;flex-direction:column">
-        <div style="text-align:center;padding:48px 32px;max-width:480px">
-          <div style="font-size:56px;margin-bottom:20px">✨</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:#fff;margin-bottom:12px">Exercices<br><em style="background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Neuro-Alchimiques</em></div>
-          <div style="color:var(--t3);font-size:14px;line-height:1.8;margin-bottom:28px">Cet espace arrive bientôt.<br>NyXia t'y guidera à travers des exercices de transformation intérieure. 💜</div>
-          <button onclick="sendSuggestion('Propose-moi un exercice neuro-alchimique')" style="padding:12px 28px;border-radius:50px;border:1px solid rgba(123,92,255,0.35);background:rgba(123,92,255,0.1);color:var(--t2);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(123,92,255,0.2)'" onmouseout="this.style.background='rgba(123,92,255,0.1)'">
-            ✨ Demander un exercice à NyXia
-          </button>
+      <!-- Panel Exercices Neuro-Alchimiques — iframe -->
+      <div class="panel" id="panel-neuro" style="flex-direction:column">
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe src="/neuro-alchimie.html" style="width:100%;height:100%;border:none;display:block" title="Exercices Neuro-Alchimiques"></iframe>
         </div>
       </div>
 
-      <!-- Panel Journal de Réflexion -->
-      <div class="panel" id="panel-journal" style="align-items:center;justify-content:center;flex-direction:column">
-        <div style="text-align:center;padding:48px 32px;max-width:480px">
-          <div style="font-size:56px;margin-bottom:20px">📖</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:#fff;margin-bottom:12px">Journal de<br><em style="background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Réflexion</em></div>
-          <div style="color:var(--t3);font-size:14px;line-height:1.8;margin-bottom:28px">Ton espace d'écriture intime arrive bientôt.<br>Un endroit où poser ce que tu portes, en mots. 💜</div>
-          <button onclick="sendSuggestion('Je voudrais écrire dans mon journal aujourd\'hui')" style="padding:12px 28px;border-radius:50px;border:1px solid rgba(123,92,255,0.35);background:rgba(123,92,255,0.1);color:var(--t2);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(123,92,255,0.2)'" onmouseout="this.style.background='rgba(123,92,255,0.1)'">
-            📖 Commencer avec NyXia
-          </button>
+      <!-- Panel Journal de Réflexion — iframe -->
+      <div class="panel" id="panel-journal" style="flex-direction:column">
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe src="/journal-reflexion.html" style="width:100%;height:100%;border:none;display:block" title="Journal de Réflexion"></iframe>
         </div>
       </div>
 
-      <!-- Panel Sommeil & Récupération -->
-      <div class="panel" id="panel-sommeil" style="align-items:center;justify-content:center;flex-direction:column">
-        <div style="text-align:center;padding:48px 32px;max-width:480px">
-          <div style="font-size:56px;margin-bottom:20px">🌙</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:#fff;margin-bottom:12px">Sommeil &<br><em style="background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Récupération</em></div>
-          <div style="color:var(--t3);font-size:14px;line-height:1.8;margin-bottom:28px">Parle à NyXia de ton sommeil et de ta fatigue.<br>Elle t'accompagnera avec douceur vers le repos. 🕯️</div>
-          <button onclick="showPanel('chat');setTimeout(()=>sendSuggestion('Je veux parler de mon sommeil et de ma récupération'),300)" style="padding:12px 28px;border-radius:50px;border:1px solid rgba(123,92,255,0.35);background:rgba(123,92,255,0.1);color:var(--t2);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(123,92,255,0.2)'" onmouseout="this.style.background='rgba(123,92,255,0.1)'">
-            🌙 En parler à NyXia
-          </button>
+      <!-- Panel Sommeil & Récupération — iframe -->
+      <div class="panel" id="panel-sommeil" style="flex-direction:column">
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe src="/sommeil-recuperation.html" style="width:100%;height:100%;border:none;display:block" title="Sommeil & Récupération"></iframe>
         </div>
       </div>
 
-      <!-- Panel Mes Émergences -->
-      <div class="panel" id="panel-emergences" style="align-items:center;justify-content:center;flex-direction:column">
-        <div style="text-align:center;padding:48px 32px;max-width:480px">
-          <div style="font-size:56px;margin-bottom:20px">💎</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:#fff;margin-bottom:12px">Mes<br><em style="background:linear-gradient(135deg,#a78bfa,var(--p3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Émergences</em></div>
-          <div style="color:var(--t3);font-size:14px;line-height:1.8;margin-bottom:28px">Ici seront préservées tes prises de conscience,<br>tes moments de clarté et de transformation. 💜</div>
-          <button onclick="sendSuggestion('J\'ai eu une prise de conscience que j\'aimerais noter')" style="padding:12px 28px;border-radius:50px;border:1px solid rgba(123,92,255,0.35);background:rgba(123,92,255,0.1);color:var(--t2);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(123,92,255,0.2)'" onmouseout="this.style.background='rgba(123,92,255,0.1)'">
-            💎 Partager avec NyXia
-          </button>
+      <!-- Panel Mes Émergences — iframe -->
+      <div class="panel" id="panel-emergences" style="flex-direction:column">
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe src="/emergences.html" style="width:100%;height:100%;border:none;display:block" title="Mes Émergences"></iframe>
         </div>
       </div>
     </div>
@@ -331,6 +311,19 @@
       var navEl = document.getElementById('nav-' + name)
       if (navEl) navEl.classList.add('active')
     }
+
+    /* ═══════ MESSAGES DES IFRAMES → NyXia ═══════ */
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.type === 'nyxia_suggest' && e.data.text) {
+        // Basculer vers le chat
+        showPanel('chat')
+        // Attendre que le panel soit visible, puis envoyer
+        setTimeout(function() {
+          document.getElementById('suggestions').style.display = 'none'
+          sendMessageText(e.data.text)
+        }, 300)
+      }
+    })
 
     /* ═══════ CHAT ═══════ */
     var chatHistory = [], isSpeaking = false, _currentAttachment = null, _currentAgent = 'nyxia'

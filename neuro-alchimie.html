@@ -129,6 +129,13 @@
       .badge-wrap { justify-content:center; }
     }
   </style>
+  <script>
+    function sendToNyXia() {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'nyxia_suggest', text: 'Je voudrais faire un exercice neuro-alchimique. Avant de me proposer quelque chose, demande-moi d'abord comment je me sens en ce moment — physiquement, émotionnellement — pour que tu puisses choisir l'exercice du Miroir le plus adapté à ce que je vis.' }, '*');
+      }
+    }
+  </script>
 </head>
 <body>
   <div class="bg"></div>
@@ -179,7 +186,7 @@
     function sendToNyXia() {
       // Envoyer un message à NyXia dans le dashboard parent
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: 'nyxia_suggest', text: 'Propose-moi un exercice neuro-alchimique adapté à ce que je vis en ce moment.' }, '*');
+        window.parent.postMessage({ type: 'nyxia_suggest', text: 'Je voudrais faire un exercice neuro-alchimique. Avant de me proposer quelque chose, demande-moi d'abord comment je me sens en ce moment — physiquement, émotionnellement — pour que tu puisses choisir l'exercice du Miroir le plus adapté à ce que je vis.' }, '*');
       }
     }
 

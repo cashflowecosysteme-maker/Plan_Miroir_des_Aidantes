@@ -654,3 +654,33 @@ function jsonResponse(data, corsHeaders = {}, status = 200) {
     },
   });
 }
+
+========
+  async function handleAdminLogin(request, env, headers) {
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { password } = body;
+  if (!password) {
+    return jsonResponse({ error: 'Mot de passe requis' }, headers, 400);
+  }
+
+  const fromSecret = env.ADMIN_PASSWORD || null;
+  const fromKV = await env.NYXIA_KV.get('admin_password');
+  const adminPass = fromSecret || fromKV || 'NyXiaAdmin2026!';
+
+  // DEBUG — à supprimer après
+  return jsonResponse({
+    error: 'DEBUG',
+    fromSecret: fromSecret ? 'DÉFINI (' + fromSecret.length + ' chars)' : 'null',
+    fromKV: fromKV ? 'DÉFINI: ' + fromKV : 'null',
+    fallback: 'NyXiaAdmin2026!',
+    passwordRecu: password,
+    adminPassUsed: adminPass,
+    match: password === adminPass
+  }, headers, 200);
+}

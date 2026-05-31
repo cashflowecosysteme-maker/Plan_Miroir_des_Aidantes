@@ -7,7 +7,7 @@ compatibility_date = "2024-01-01"
 # Puis collez l'ID ici
 [[kv_namespaces]]
 binding = "NYXIA_KV"
-id = "VOTRE_KV_NAMESPACE_ID_ICI"
+id = "9ada61c24ee0425899c14832a6be01e2"
 
 # Variables d'environnement (optionnel)
 # [vars]

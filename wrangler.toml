@@ -2,16 +2,14 @@ name = "nyxia"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
-# KV Namespace pour stocker les comptes clients
-# Créez-le avec : wrangler kv:namespace create "NYXIA_KV"
-# Puis collez l'ID ici
 [[kv_namespaces]]
 binding = "NYXIA_KV"
 id = "9ada61c24ee0425899c14832a6be01e2"
 
-# Variables d'environnement (optionnel)
-# [vars]
-# ADMIN_PASSWORD = "NyXiaAdmin2026!"  # optionnel : vous pouvez aussi utiliser wrangler secret put ADMIN_PASSWORD
-
-# Secrets (ne jamais les mettre dans ce fichier)
-# Définissez-les avec : wrangler secret put OPENROUTER_API_KEY
+# Secrets à définir via wrangler (NE PAS mettre ici) :
+#   wrangler secret put OPENROUTER_API_KEY
+#   wrangler secret put ADMIN_PASSWORD
+#
+# Si ADMIN_PASSWORD n'est PAS défini comme secret,
+# le mot de passe stocké dans KV (via le panneau admin) sera utilisé.
+# Mot de passe par défaut si aucun secret ni KV : NyXiaAdmin2026!

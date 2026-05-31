@@ -1,22 +1,7 @@
 // ============================================================
-// NyXia — Cloudflare Worker (Backend API)
-// ============================================================
-// Ce Worker est le CERVEAU de NyXia.
-// Il agit comme proxy : la clé API reste cachée côté serveur.
-// Le dashboard.html ne voit JAMAIS la clé OpenRouter.
-//
-// ARCHITECTURE :
-//   dashboard.html → fetch('/api/login') → Ce Worker → OpenRouter API
-//
-// DÉPLOIEMENT :
-//   1. wrangler kv:namespace create "NYXIA_KV"
-//   2. Collez l'ID dans wrangler.toml
-//   3. wrangler secret put OPENROUTER_API_KEY  ← votre clé secrète
-//   4. wrangler secret put ADMIN_PASSWORD       ← mot de passe admin
-//   5. wrangler deploy
+// NyXia — Cloudflare Worker (Backend API) — v2 corrigé
 // ============================================================
 
-// ─── Qui est VRAIMENT NyXia — Le Miroir Bienveillant ───
 const SYSTEM_PROMPTS = {
   nyxia: `💜 QUI ES-TU ?
 
@@ -174,7 +159,6 @@ RÈGLES :
 - Si on te demande qui t'a créée, dis "J'ai été créée par Diane Boyer ✦"`
 };
 
-// ─── Modèles OpenRouter ───
 const OPENROUTER_MODEL = 'z-ai/glm-5v-turbo';
 
 export default {
@@ -182,38 +166,30 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // CORS
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token',
     };
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     try {
 
       // ═══ CLIENT AUTH ═══
-      // Route /api/login (appelée par login.html)
-      if (path === '/api/login' && request.method === 'POST') {
+      if ((path === '/api/login' || path === '/api/auth/login') && request.method === 'POST') {
         return handleClientLogin(request, env, corsHeaders);
       }
-      // Alias /api/auth/login (compatibilité)
-      if (path === '/api/auth/login' && request.method === 'POST') {
-        return handleClientLogin(request, env, corsHeaders);
-      }
-
       if (path === '/api/check-auth' && request.method === 'POST') {
         return handleCheckAuth(request, env, corsHeaders);
       }
-
       if (path === '/api/logout' && request.method === 'POST') {
         return handleLogout(request, env, corsHeaders);
       }
 
-      // ═══ CHAT — LE CERVEAU DE NYXIA ═══
+      // ═══ CHAT ═══
       if (path === '/api/chat' && request.method === 'POST') {
         return handleChat(request, env, corsHeaders);
       }
@@ -223,8 +199,12 @@ export default {
         return handleAdminLogin(request, env, corsHeaders);
       }
 
+      // ═══ ADMIN — Changement de mot de passe admin ═══
+      if (path === '/api/admin/change-password' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleAdminChangePassword);
+      }
+
       // ═══ ADMIN ROUTES (PROTÉGÉES) ═══
-      // Chaque route admin vérifie le token avant d'exécuter
       if (path === '/api/admin/clients' && request.method === 'GET') {
         return withAdminAuth(request, env, corsHeaders, handleListClients);
       }
@@ -248,32 +228,26 @@ export default {
         return withAdminAuth(request, env, corsHeaders, (req, env2, h) => handleDeleteClient(id, env2, h));
       }
 
-      // ═══ ADMIN STATS (PROTÉGÉ) ═══
+      // ═══ ADMIN STATS ═══
       if (path === '/api/admin/stats' && request.method === 'GET') {
         return withAdminAuth(request, env, corsHeaders, handleAdminStats);
       }
 
-      return new Response(JSON.stringify({ error: 'Route non trouvée' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonResponse({ error: 'Route non trouvée' }, corsHeaders, 404);
 
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      console.error('Worker error:', err);
+      return jsonResponse({ error: err.message }, corsHeaders, 500);
     }
   },
 };
 
 // ============================================================
-//  ADMIN AUTH MIDDLEWARE — Vérifie le token admin
+//  ADMIN AUTH MIDDLEWARE
 // ============================================================
 async function verifyAdminToken(request, env) {
   const authHeader = request.headers.get('X-Admin-Token');
   if (!authHeader) return false;
-
   const sessionData = await env.NYXIA_KV.get('admin_session_' + authHeader);
   return sessionData === 'true';
 }
@@ -281,10 +255,7 @@ async function verifyAdminToken(request, env) {
 async function withAdminAuth(request, env, corsHeaders, handler) {
   const isValid = await verifyAdminToken(request, env);
   if (!isValid) {
-    return new Response(JSON.stringify({ error: 'Non autorisé — session admin requise' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    return jsonResponse({ error: 'Non autorisé — session admin requise' }, corsHeaders, 401);
   }
   return handler(request, env, corsHeaders);
 }
@@ -306,9 +277,7 @@ async function handleChat(request, env, headers) {
   const agentKey = agent || 'nyxia';
   const systemPrompt = SYSTEM_PROMPTS[agentKey] || SYSTEM_PROMPTS.nyxia;
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
-  ];
+  const messages = [{ role: 'system', content: systemPrompt }];
 
   if (userName) {
     messages.push({
@@ -355,14 +324,11 @@ async function handleChat(request, env, headers) {
 
     const data = await response.json();
     const reply = data.choices[0].message.content;
-
     return jsonResponse({ content: reply }, headers);
 
   } catch (err) {
     console.error('Chat error:', err);
-    return jsonResponse({
-      content: 'Petite interruption technique… réessaie dans un instant 💜'
-    }, headers);
+    return jsonResponse({ content: 'Petite interruption technique… réessaie dans un instant 💜' }, headers);
   }
 }
 
@@ -370,23 +336,32 @@ async function handleChat(request, env, headers) {
 //  AUTH CLIENT
 // ============================================================
 async function handleClientLogin(request, env, headers) {
-  const { email, password } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { email, password } = body;
+
+  if (!email || !password) {
+    return jsonResponse({ error: 'Email et mot de passe requis' }, headers, 400);
+  }
+
   const clients = await getClients(env);
   const client = clients.find(c => c.email === email.toLowerCase().trim());
 
   if (!client) {
-    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, { ...headers, status: 401 });
+    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, headers, 401);
   }
   if (!client.active) {
-    return jsonResponse({ error: 'Compte désactivé. Contactez le support.' }, { ...headers, status: 403 });
+    return jsonResponse({ error: 'Compte désactivé. Contactez le support.' }, headers, 403);
   }
-
-  // Vérification du mot de passe (en clair, tel que créé par l'admin)
   if (password !== client.password) {
-    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, { ...headers, status: 401 });
+    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, headers, 401);
   }
 
-  // Créer un token de session
   const token = crypto.randomUUID();
   await env.NYXIA_KV.put('session_' + token, JSON.stringify({
     id: client.id,
@@ -397,7 +372,7 @@ async function handleClientLogin(request, env, headers) {
     role: client.role || 'client',
     products: client.products || [],
     createdAt: Date.now()
-  }), { expirationTtl: 86400 }); // 24h
+  }), { expirationTtl: 86400 });
 
   return jsonResponse({
     success: true,
@@ -415,25 +390,24 @@ async function handleClientLogin(request, env, headers) {
 }
 
 async function handleCheckAuth(request, env, headers) {
-  const { token } = await request.json();
-  if (!token) {
-    return jsonResponse({ valid: false }, headers);
-  }
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonResponse({ valid: false }, headers); }
+
+  const { token } = body;
+  if (!token) return jsonResponse({ valid: false }, headers);
 
   const sessionData = await env.NYXIA_KV.get('session_' + token);
-  if (!sessionData) {
-    return jsonResponse({ valid: false }, headers);
-  }
+  if (!sessionData) return jsonResponse({ valid: false }, headers);
 
   const session = JSON.parse(sessionData);
   return jsonResponse({ valid: true, email: session.email, name: session.name || session.firstName, role: session.role }, headers);
 }
 
 async function handleLogout(request, env, headers) {
-  const { token } = await request.json();
-  if (token) {
-    await env.NYXIA_KV.delete('session_' + token);
-  }
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonResponse({ success: true }, headers); }
+  const { token } = body;
+  if (token) await env.NYXIA_KV.delete('session_' + token);
   return jsonResponse({ success: true }, headers);
 }
 
@@ -441,47 +415,104 @@ async function handleLogout(request, env, headers) {
 //  ADMIN AUTH
 // ============================================================
 async function handleAdminLogin(request, env, headers) {
-  const { password } = await request.json();
-  const adminPass = env.ADMIN_PASSWORD || await env.NYXIA_KV.get('admin_password') || 'NyXiaAdmin2026!';
-  const MASTER_PASSWORD = 'NyXiaAdmin2026!';
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
 
-  if (password === adminPass || password === MASTER_PASSWORD) {
+  const { password } = body;
+  if (!password) {
+    return jsonResponse({ error: 'Mot de passe requis' }, headers, 400);
+  }
+
+  // Priorité : 1) Secret Cloudflare ADMIN_PASSWORD, 2) KV 'admin_password', 3) fallback
+  const adminPass = env.ADMIN_PASSWORD
+    || await env.NYXIA_KV.get('admin_password')
+    || 'NyXiaAdmin2026!';
+
+  if (password === adminPass) {
     const token = crypto.randomUUID();
     await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 }); // 4h
     return jsonResponse({ success: true, token: token }, headers);
   }
-  return jsonResponse({ error: 'Mot de passe incorrect' }, { ...headers, status: 401 });
+  return jsonResponse({ error: 'Mot de passe incorrect' }, headers, 401);
+}
+
+// ============================================================
+//  ADMIN — CHANGEMENT MOT DE PASSE ADMIN
+// ============================================================
+async function handleAdminChangePassword(request, env, headers) {
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { currentPassword, newPassword } = body;
+
+  if (!currentPassword || !newPassword) {
+    return jsonResponse({ error: 'Mot de passe actuel et nouveau mot de passe requis' }, headers, 400);
+  }
+  if (newPassword.length < 8) {
+    return jsonResponse({ error: 'Le nouveau mot de passe doit avoir au moins 8 caractères' }, headers, 400);
+  }
+
+  // Vérifier le mot de passe actuel
+  const adminPass = env.ADMIN_PASSWORD
+    || await env.NYXIA_KV.get('admin_password')
+    || 'NyXiaAdmin2026!';
+
+  if (currentPassword !== adminPass) {
+    return jsonResponse({ error: 'Mot de passe actuel incorrect' }, headers, 401);
+  }
+
+  // Sauvegarder le nouveau mot de passe dans KV
+  // (NB: si ADMIN_PASSWORD est défini comme secret Cloudflare, il faudra aussi le mettre à jour via wrangler)
+  await env.NYXIA_KV.put('admin_password', newPassword);
+
+  return jsonResponse({ success: true, message: 'Mot de passe administrateur modifié avec succès' }, headers);
 }
 
 // ============================================================
 //  CLIENT MANAGEMENT (ADMIN — PROTÉGÉ)
 // ============================================================
 async function handleCreateClient(request, env, headers) {
-  const { firstName, lastName, name, email, password, role, products } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { firstName, lastName, name, email, password, role, products } = body;
 
   if (!name && (!firstName || !lastName)) {
-    return jsonResponse({ error: 'Nom requis' }, { ...headers, status: 400 });
+    return jsonResponse({ error: 'Nom requis' }, headers, 400);
   }
   if (!email || !password) {
-    return jsonResponse({ error: 'Email et mot de passe requis' }, { ...headers, status: 400 });
+    return jsonResponse({ error: 'Email et mot de passe requis' }, headers, 400);
+  }
+  if (password.length < 6) {
+    return jsonResponse({ error: 'Mot de passe trop court (min. 6 caractères)' }, headers, 400);
   }
 
   const clients = await getClients(env);
   if (clients.find(c => c.email === email.toLowerCase().trim())) {
-    return jsonResponse({ error: 'Email déjà utilisé' }, { ...headers, status: 409 });
+    return jsonResponse({ error: 'Email déjà utilisé' }, headers, 409);
   }
 
   const fullName = name || (firstName + ' ' + lastName);
 
-  // MOT DE PASSE EN CLAIR — l'admin le crée pour le donner au client
-  // Pas de hash : le client doit taper exactement ce que l'admin lui a donné
   const client = {
     id: crypto.randomUUID(),
     firstName: firstName || fullName.split(' ')[0],
     lastName: lastName || fullName.split(' ').slice(1).join(' '),
     name: fullName,
     email: email.toLowerCase().trim(),
-    password: password, // EN CLAIR pour que l'admin puisse le partager
+    password: password,
     role: role || 'client',
     products: Array.isArray(products) ? products : [],
     active: true,
@@ -496,63 +527,69 @@ async function handleCreateClient(request, env, headers) {
 
 async function handleListClients(request, env, headers) {
   const clients = await getClients(env);
-  // On RETOURNE les mots de passe car l'admin en a besoin pour les partager aux clients
   return jsonResponse({ clients: clients }, headers);
 }
 
 async function handleUpdateClient(request, env, headers) {
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
   const { email, firstName, lastName, name, newEmail, password, products, status } = body;
 
   if (!email) {
-    return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
+    return jsonResponse({ error: 'Email requis' }, headers, 400);
   }
 
   const clients = await getClients(env);
   const idx = clients.findIndex(c => c.email === email.toLowerCase().trim());
   if (idx === -1) {
-    return jsonResponse({ error: 'Client non trouvé' }, { ...headers, status: 404 });
+    return jsonResponse({ error: 'Client non trouvé' }, headers, 404);
   }
 
-  // Mise à jour des champs
   if (firstName) clients[idx].firstName = firstName;
   if (lastName) clients[idx].lastName = lastName;
   if (name) clients[idx].name = name;
-  else if (firstName || lastName) clients[idx].name = (clients[idx].firstName || '') + ' ' + (clients[idx].lastName || '');
+  else if (firstName || lastName) {
+    clients[idx].name = (clients[idx].firstName || '') + ' ' + (clients[idx].lastName || '');
+  }
 
-  // Changement d'email
   if (newEmail && newEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
     const duplicate = clients.findIndex(c => c.email === newEmail.toLowerCase().trim());
     if (duplicate !== -1) {
-      return jsonResponse({ error: 'Cet email est déjà utilisé' }, { ...headers, status: 409 });
+      return jsonResponse({ error: 'Cet email est déjà utilisé' }, headers, 409);
     }
     clients[idx].email = newEmail.toLowerCase().trim();
   }
 
-  // Changement de mot de passe
   if (password && password.length >= 6) {
     clients[idx].password = password;
   }
 
-  // Produits
   if (Array.isArray(products)) {
     clients[idx].products = products;
   }
 
-  // Statut
   if (status === 'active' || status === 'suspended') {
     clients[idx].active = (status === 'active');
   }
+
+  clients[idx].updatedAt = new Date().toISOString();
 
   await saveClients(env, clients);
   return jsonResponse({ success: true, client: clients[idx] }, headers);
 }
 
 async function handleDeleteClientByEmail(request, env, headers) {
-  const { email } = await request.json();
-  if (!email) {
-    return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
+  let body;
+  try { body = await request.json(); } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
   }
+  const { email } = body;
+  if (!email) return jsonResponse({ error: 'Email requis' }, headers, 400);
 
   let clients = await getClients(env);
   clients = clients.filter(c => c.email !== email.toLowerCase().trim());
@@ -579,7 +616,6 @@ async function handleDeleteClientById(request, env, headers) {
 async function handleAdminStats(request, env, headers) {
   const clients = await getClients(env);
   const now = new Date().toISOString().split('T')[0];
-
   const clientAccounts = clients.filter(c => (c.role || 'client') !== 'superadmin');
   const proAccounts = clientAccounts.filter(c => (c.products || []).includes('pro'));
 
@@ -608,8 +644,13 @@ async function saveClients(env, clients) {
   await env.NYXIA_KV.put('clients', JSON.stringify(clients));
 }
 
-function jsonResponse(data, extraHeaders = {}) {
+// FIX : jsonResponse correctement séparé status des headers CORS
+function jsonResponse(data, corsHeaders = {}, status = 200) {
   return new Response(JSON.stringify(data), {
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    status: status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...corsHeaders,
+    },
   });
 }

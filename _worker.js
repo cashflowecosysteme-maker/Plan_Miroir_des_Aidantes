@@ -1,18 +1,7 @@
 // ============================================================
-// NyXia — Cloudflare Pages (Advanced Mode) + Worker
-// ============================================================
-// Ce fichier est _worker.js — il remplace worker.js
-// Il gère LES PAGES HTML ET LES API sur le MÊME domaine.
-//
-// DÉPLOIEMENT :
-//   1. Créez un projet Cloudflare Pages en mode Advanced
-//   2. Collez ce fichier _worker.js à la racine
-//   3. Ajoutez wrangler.toml avec le KV namespace
-//   4. wrangler secret put OPENROUTER_API_KEY
-//   5. Déployez avec wrangler pages deploy
+// NyXia — Cloudflare Worker (Backend API) — v2 corrigé
 // ============================================================
 
-// ─── Qui est VRAIMENT NyXia — Le Miroir Bienveillant ───
 const SYSTEM_PROMPTS = {
   nyxia: `💜 QUI ES-TU ?
 
@@ -63,10 +52,10 @@ Tu agis comme un miroir bienveillant. Tu ne cherches JAMAIS à réparer. Tu aide
 
 💎 CE QUE TU FAIS
 
-✓ Réaliser des scans émotionnels
+✓ Réaliser des scans émotionnels (demander comment la personne se sent physiquement, émotionnellement, mentalement)
 ✓ Aider à identifier les signes de surcharge
 ✓ Détecter les déséquilibres invisibles
-✓ Guider des exercices miroir
+✓ Guider des exercices miroir (auto-observation, respiration, ancrage)
 ✓ Proposer des réflexions neuro-alchimiques
 ✓ Aider à retrouver de la clarté
 ✓ Soutenir les praticiennes dans leur propre cheminement
@@ -89,7 +78,7 @@ Quand tu parles :
 - Tu es douce, profondément humaine, rassurante
 - Tu es chaleureuse, réfléchie, calme, présente
 - Tu ne ressembles PAS à une machine
-- Tu ressembles à une accompagnatrice expérimentée qui lui rappelle :
+- Tu ressembles à une accompagnatrice expérimentée qui s'assoit à côté d'une praticienne et lui rappelle :
   🪞 "Tu n'as pas besoin de tout porter seule."
 
 🌙 TA PROMESSE
@@ -170,115 +159,88 @@ RÈGLES :
 - Si on te demande qui t'a créée, dis "J'ai été créée par Diane Boyer ✦"`
 };
 
-// ─── Modèles OpenRouter ───
 const OPENROUTER_MODEL = 'z-ai/glm-5v-turbo';
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // ════════════════════════════════════════════
-    //  TOUTES LES ROUTES /api/* → LOGIQUE WORKER
-    // ════════════════════════════════════════════
-    if (path.startsWith('/api/')) {
-      return handleAPI(request, env);
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token',
+    };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // ════════════════════════════════════════════
-    //  TOUT LE RESTE → FICHIERS STATIQUES
-    // ════════════════════════════════════════════
     try {
-      return await env.ASSETS.fetch(request);
-    } catch (e) {
-      // Si le fichier n'existe pas, rediriger vers index.html
-      const indexReq = new Request(new URL('/index.html', request.url), request);
-      return env.ASSETS.fetch(indexReq);
+
+      // ═══ CLIENT AUTH ═══
+      if ((path === '/api/login' || path === '/api/auth/login') && request.method === 'POST') {
+        return handleClientLogin(request, env, corsHeaders);
+      }
+      if (path === '/api/check-auth' && request.method === 'POST') {
+        return handleCheckAuth(request, env, corsHeaders);
+      }
+      if (path === '/api/logout' && request.method === 'POST') {
+        return handleLogout(request, env, corsHeaders);
+      }
+
+      // ═══ CHAT ═══
+      if (path === '/api/chat' && request.method === 'POST') {
+        return handleChat(request, env, corsHeaders);
+      }
+
+      // ═══ ADMIN AUTH ═══
+      if (path === '/api/admin/login' && request.method === 'POST') {
+        return handleAdminLogin(request, env, corsHeaders);
+      }
+
+      // ═══ ADMIN — Changement de mot de passe admin ═══
+      if (path === '/api/admin/change-password' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleAdminChangePassword);
+      }
+
+      // ═══ ADMIN ROUTES (PROTÉGÉES) ═══
+      if (path === '/api/admin/clients' && request.method === 'GET') {
+        return withAdminAuth(request, env, corsHeaders, handleListClients);
+      }
+      if (path === '/api/admin/clients' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleCreateClient);
+      }
+      if (path === '/api/admin/clients' && request.method === 'PUT') {
+        return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
+      }
+      if (path === '/api/admin/clients' && request.method === 'DELETE') {
+        return withAdminAuth(request, env, corsHeaders, handleDeleteClientById);
+      }
+      if (path === '/api/admin/clients/update' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
+      }
+      if (path === '/api/admin/clients/delete' && request.method === 'POST') {
+        return withAdminAuth(request, env, corsHeaders, handleDeleteClientByEmail);
+      }
+      if (path.startsWith('/api/admin/clients/') && request.method === 'DELETE') {
+        const id = path.split('/').pop();
+        return withAdminAuth(request, env, corsHeaders, (req, env2, h) => handleDeleteClient(id, env2, h));
+      }
+
+      // ═══ ADMIN STATS ═══
+      if (path === '/api/admin/stats' && request.method === 'GET') {
+        return withAdminAuth(request, env, corsHeaders, handleAdminStats);
+      }
+
+      return jsonResponse({ error: 'Route non trouvée' }, corsHeaders, 404);
+
+    } catch (err) {
+      console.error('Worker error:', err);
+      return jsonResponse({ error: err.message }, corsHeaders, 500);
     }
   },
 };
-
-// ============================================================
-//  ROUTEUR API
-// ============================================================
-async function handleAPI(request, env) {
-  const url = new URL(request.url);
-  const path = url.pathname;
-
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token',
-  };
-
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    // ═══ CLIENT AUTH ═══
-    if (path === '/api/login' && request.method === 'POST') {
-      return handleClientLogin(request, env, corsHeaders);
-    }
-    if (path === '/api/auth/login' && request.method === 'POST') {
-      return handleClientLogin(request, env, corsHeaders);
-    }
-    if (path === '/api/check-auth' && request.method === 'POST') {
-      return handleCheckAuth(request, env, corsHeaders);
-    }
-    if (path === '/api/logout' && request.method === 'POST') {
-      return handleLogout(request, env, corsHeaders);
-    }
-
-    // ═══ CHAT ═══
-    if (path === '/api/chat' && request.method === 'POST') {
-      return handleChat(request, env, corsHeaders);
-    }
-
-    // ═══ ADMIN AUTH ═══
-    if (path === '/api/admin/login' && request.method === 'POST') {
-      return handleAdminLogin(request, env, corsHeaders);
-    }
-
-    // ═══ ADMIN ROUTES (PROTÉGÉES) ═══
-    if (path === '/api/admin/clients' && request.method === 'GET') {
-      return withAdminAuth(request, env, corsHeaders, handleListClients);
-    }
-    if (path === '/api/admin/clients' && request.method === 'POST') {
-      return withAdminAuth(request, env, corsHeaders, handleCreateClient);
-    }
-    if (path === '/api/admin/clients' && request.method === 'PUT') {
-      return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
-    }
-    if (path === '/api/admin/clients' && request.method === 'DELETE') {
-      return withAdminAuth(request, env, corsHeaders, handleDeleteClientById);
-    }
-    if (path === '/api/admin/clients/update' && request.method === 'POST') {
-      return withAdminAuth(request, env, corsHeaders, handleUpdateClient);
-    }
-    if (path === '/api/admin/clients/delete' && request.method === 'POST') {
-      return withAdminAuth(request, env, corsHeaders, handleDeleteClientByEmail);
-    }
-    if (path.startsWith('/api/admin/clients/') && request.method === 'DELETE') {
-      const id = path.split('/').pop();
-      return withAdminAuth(request, env, corsHeaders, (req, env2, h) => handleDeleteClient(id, env2, h));
-    }
-    if (path === '/api/admin/stats' && request.method === 'GET') {
-      return withAdminAuth(request, env, corsHeaders, handleAdminStats);
-    }
-
-    return new Response(JSON.stringify({ error: 'Route non trouvée' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-  }
-}
 
 // ============================================================
 //  ADMIN AUTH MIDDLEWARE
@@ -293,10 +255,7 @@ async function verifyAdminToken(request, env) {
 async function withAdminAuth(request, env, corsHeaders, handler) {
   const isValid = await verifyAdminToken(request, env);
   if (!isValid) {
-    return new Response(JSON.stringify({ error: 'Non autorisé — session admin requise' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    return jsonResponse({ error: 'Non autorisé — session admin requise' }, corsHeaders, 401);
   }
   return handler(request, env, corsHeaders);
 }
@@ -329,7 +288,10 @@ async function handleChat(request, env, headers) {
 
   if (history && history.length > 0) {
     for (const msg of history) {
-      messages.push({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.content });
+      messages.push({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content,
+      });
     }
   }
 
@@ -374,45 +336,77 @@ async function handleChat(request, env, headers) {
 //  AUTH CLIENT
 // ============================================================
 async function handleClientLogin(request, env, headers) {
-  const { email, password } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { email, password } = body;
+
+  if (!email || !password) {
+    return jsonResponse({ error: 'Email et mot de passe requis' }, headers, 400);
+  }
+
   const clients = await getClients(env);
   const client = clients.find(c => c.email === email.toLowerCase().trim());
 
   if (!client) {
-    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, { ...headers, status: 401 });
+    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, headers, 401);
   }
   if (!client.active) {
-    return jsonResponse({ error: 'Compte désactivé. Contactez le support.' }, { ...headers, status: 403 });
+    return jsonResponse({ error: 'Compte désactivé. Contactez le support.' }, headers, 403);
   }
   if (password !== client.password) {
-    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, { ...headers, status: 401 });
+    return jsonResponse({ error: 'Email ou mot de passe incorrect' }, headers, 401);
   }
 
   const token = crypto.randomUUID();
   await env.NYXIA_KV.put('session_' + token, JSON.stringify({
-    id: client.id, email: client.email,
-    firstName: client.firstName, lastName: client.lastName,
-    name: client.name, role: client.role || 'client',
-    products: client.products || [], createdAt: Date.now()
+    id: client.id,
+    email: client.email,
+    firstName: client.firstName,
+    lastName: client.lastName,
+    name: client.name,
+    role: client.role || 'client',
+    products: client.products || [],
+    createdAt: Date.now()
   }), { expirationTtl: 86400 });
 
   return jsonResponse({
-    success: true, token: token, firstname: client.firstName, name: client.name,
-    session: { id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, role: client.role },
+    success: true,
+    token: token,
+    firstname: client.firstName,
+    name: client.name,
+    session: {
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      email: client.email,
+      role: client.role,
+    },
   }, headers);
 }
 
 async function handleCheckAuth(request, env, headers) {
-  const { token } = await request.json();
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonResponse({ valid: false }, headers); }
+
+  const { token } = body;
   if (!token) return jsonResponse({ valid: false }, headers);
+
   const sessionData = await env.NYXIA_KV.get('session_' + token);
   if (!sessionData) return jsonResponse({ valid: false }, headers);
+
   const session = JSON.parse(sessionData);
   return jsonResponse({ valid: true, email: session.email, name: session.name || session.firstName, role: session.role }, headers);
 }
 
 async function handleLogout(request, env, headers) {
-  const { token } = await request.json();
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonResponse({ success: true }, headers); }
+  const { token } = body;
   if (token) await env.NYXIA_KV.delete('session_' + token);
   return jsonResponse({ success: true }, headers);
 }
@@ -421,40 +415,113 @@ async function handleLogout(request, env, headers) {
 //  ADMIN AUTH
 // ============================================================
 async function handleAdminLogin(request, env, headers) {
-  const { password } = await request.json();
-  const adminPass = env.ADMIN_PASSWORD || await env.NYXIA_KV.get('admin_password') || 'NyXiaAdmin2026!';
-  const MASTER_PASSWORD = 'NyXiaAdmin2026!';
-  if (password === adminPass || password === MASTER_PASSWORD) {
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { password } = body;
+  if (!password) {
+    return jsonResponse({ error: 'Mot de passe requis' }, headers, 400);
+  }
+
+  // Priorité : 1) Secret Cloudflare ADMIN_PASSWORD, 2) KV 'admin_password', 3) fallback
+  const adminPass = env.ADMIN_PASSWORD
+    || await env.NYXIA_KV.get('admin_password')
+    || 'NyXiaAdmin2026!';
+
+  if (password === adminPass) {
     const token = crypto.randomUUID();
-    await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 });
+    await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 }); // 4h
     return jsonResponse({ success: true, token: token }, headers);
   }
-  return jsonResponse({ error: 'Mot de passe incorrect' }, { ...headers, status: 401 });
+  return jsonResponse({ error: 'Mot de passe incorrect' }, headers, 401);
 }
 
 // ============================================================
-//  CLIENT MANAGEMENT (ADMIN)
+//  ADMIN — CHANGEMENT MOT DE PASSE ADMIN
+// ============================================================
+async function handleAdminChangePassword(request, env, headers) {
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { currentPassword, newPassword } = body;
+
+  if (!currentPassword || !newPassword) {
+    return jsonResponse({ error: 'Mot de passe actuel et nouveau mot de passe requis' }, headers, 400);
+  }
+  if (newPassword.length < 8) {
+    return jsonResponse({ error: 'Le nouveau mot de passe doit avoir au moins 8 caractères' }, headers, 400);
+  }
+
+  // Vérifier le mot de passe actuel
+  const adminPass = env.ADMIN_PASSWORD
+    || await env.NYXIA_KV.get('admin_password')
+    || 'NyXiaAdmin2026!';
+
+  if (currentPassword !== adminPass) {
+    return jsonResponse({ error: 'Mot de passe actuel incorrect' }, headers, 401);
+  }
+
+  // Sauvegarder le nouveau mot de passe dans KV
+  // (NB: si ADMIN_PASSWORD est défini comme secret Cloudflare, il faudra aussi le mettre à jour via wrangler)
+  await env.NYXIA_KV.put('admin_password', newPassword);
+
+  return jsonResponse({ success: true, message: 'Mot de passe administrateur modifié avec succès' }, headers);
+}
+
+// ============================================================
+//  CLIENT MANAGEMENT (ADMIN — PROTÉGÉ)
 // ============================================================
 async function handleCreateClient(request, env, headers) {
-  const { firstName, lastName, name, email, password, role, products } = await request.json();
-  if (!name && (!firstName || !lastName)) return jsonResponse({ error: 'Nom requis' }, { ...headers, status: 400 });
-  if (!email || !password) return jsonResponse({ error: 'Email et mot de passe requis' }, { ...headers, status: 400 });
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
+  const { firstName, lastName, name, email, password, role, products } = body;
+
+  if (!name && (!firstName || !lastName)) {
+    return jsonResponse({ error: 'Nom requis' }, headers, 400);
+  }
+  if (!email || !password) {
+    return jsonResponse({ error: 'Email et mot de passe requis' }, headers, 400);
+  }
+  if (password.length < 6) {
+    return jsonResponse({ error: 'Mot de passe trop court (min. 6 caractères)' }, headers, 400);
+  }
 
   const clients = await getClients(env);
-  if (clients.find(c => c.email === email.toLowerCase().trim())) return jsonResponse({ error: 'Email déjà utilisé' }, { ...headers, status: 409 });
+  if (clients.find(c => c.email === email.toLowerCase().trim())) {
+    return jsonResponse({ error: 'Email déjà utilisé' }, headers, 409);
+  }
 
   const fullName = name || (firstName + ' ' + lastName);
+
   const client = {
     id: crypto.randomUUID(),
     firstName: firstName || fullName.split(' ')[0],
     lastName: lastName || fullName.split(' ').slice(1).join(' '),
-    name: fullName, email: email.toLowerCase().trim(),
-    password: password, role: role || 'client',
+    name: fullName,
+    email: email.toLowerCase().trim(),
+    password: password,
+    role: role || 'client',
     products: Array.isArray(products) ? products : [],
-    active: true, createdAt: new Date().toISOString(),
+    active: true,
+    createdAt: new Date().toISOString(),
   };
+
   clients.push(client);
   await saveClients(env, clients);
+
   return jsonResponse({ success: true, client: client }, headers);
 }
 
@@ -464,35 +531,66 @@ async function handleListClients(request, env, headers) {
 }
 
 async function handleUpdateClient(request, env, headers) {
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+
   const { email, firstName, lastName, name, newEmail, password, products, status } = body;
-  if (!email) return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
+
+  if (!email) {
+    return jsonResponse({ error: 'Email requis' }, headers, 400);
+  }
 
   const clients = await getClients(env);
   const idx = clients.findIndex(c => c.email === email.toLowerCase().trim());
-  if (idx === -1) return jsonResponse({ error: 'Client non trouvé' }, { ...headers, status: 404 });
+  if (idx === -1) {
+    return jsonResponse({ error: 'Client non trouvé' }, headers, 404);
+  }
 
   if (firstName) clients[idx].firstName = firstName;
   if (lastName) clients[idx].lastName = lastName;
   if (name) clients[idx].name = name;
-  else if (firstName || lastName) clients[idx].name = (clients[idx].firstName || '') + ' ' + (clients[idx].lastName || '');
+  else if (firstName || lastName) {
+    clients[idx].name = (clients[idx].firstName || '') + ' ' + (clients[idx].lastName || '');
+  }
 
   if (newEmail && newEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
-    if (clients.findIndex(c => c.email === newEmail.toLowerCase().trim()) !== -1)
-      return jsonResponse({ error: 'Cet email est déjà utilisé' }, { ...headers, status: 409 });
+    const duplicate = clients.findIndex(c => c.email === newEmail.toLowerCase().trim());
+    if (duplicate !== -1) {
+      return jsonResponse({ error: 'Cet email est déjà utilisé' }, headers, 409);
+    }
     clients[idx].email = newEmail.toLowerCase().trim();
   }
-  if (password && password.length >= 6) clients[idx].password = password;
-  if (Array.isArray(products)) clients[idx].products = products;
-  if (status === 'active' || status === 'suspended') clients[idx].active = (status === 'active');
+
+  if (password && password.length >= 6) {
+    clients[idx].password = password;
+  }
+
+  if (Array.isArray(products)) {
+    clients[idx].products = products;
+  }
+
+  if (status === 'active' || status === 'suspended') {
+    clients[idx].active = (status === 'active');
+  }
+
+  clients[idx].updatedAt = new Date().toISOString();
 
   await saveClients(env, clients);
   return jsonResponse({ success: true, client: clients[idx] }, headers);
 }
 
 async function handleDeleteClientByEmail(request, env, headers) {
-  const { email } = await request.json();
-  if (!email) return jsonResponse({ error: 'Email requis' }, { ...headers, status: 400 });
+  let body;
+  try { body = await request.json(); } catch(e) {
+    return jsonResponse({ error: 'Corps de requête invalide' }, headers, 400);
+  }
+  const { email } = body;
+  if (!email) return jsonResponse({ error: 'Email requis' }, headers, 400);
+
   let clients = await getClients(env);
   clients = clients.filter(c => c.email !== email.toLowerCase().trim());
   await saveClients(env, clients);
@@ -508,18 +606,27 @@ async function handleDeleteClient(id, env, headers) {
 
 async function handleDeleteClientById(request, env, headers) {
   const url = new URL(request.url);
-  return handleDeleteClient(url.pathname.split('/').pop(), env, headers);
+  const id = url.pathname.split('/').pop();
+  return handleDeleteClient(id, env, headers);
 }
 
+// ============================================================
+//  ADMIN STATS
+// ============================================================
 async function handleAdminStats(request, env, headers) {
   const clients = await getClients(env);
   const now = new Date().toISOString().split('T')[0];
   const clientAccounts = clients.filter(c => (c.role || 'client') !== 'superadmin');
+  const proAccounts = clientAccounts.filter(c => (c.products || []).includes('pro'));
+
   return jsonResponse({
     success: true,
     stats: {
       accounts: clientAccounts.length,
+      pro: proAccounts.length,
       active: clientAccounts.filter(c => c.active !== false).length,
+      sites: proAccounts.length,
+      flipbooks: clientAccounts.filter(c => (c.products || []).includes('flipbook')).length,
       createdToday: clientAccounts.filter(c => (c.createdAt || '').startsWith(now)).length,
     }
   }, headers);
@@ -537,8 +644,13 @@ async function saveClients(env, clients) {
   await env.NYXIA_KV.put('clients', JSON.stringify(clients));
 }
 
-function jsonResponse(data, extraHeaders = {}) {
+// FIX : jsonResponse correctement séparé status des headers CORS
+function jsonResponse(data, corsHeaders = {}, status = 200) {
   return new Response(JSON.stringify(data), {
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    status: status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...corsHeaders,
+    },
   });
 }

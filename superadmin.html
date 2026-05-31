@@ -520,13 +520,13 @@ async function doAdminLogin() {
       return;
     }
 
-    // Pas de fallback local — le Worker DOIT répondre
     handleFailedAttempt();
 
   } catch(e) {
-    showLoginError('⚠️ Impossible de contacter le serveur. Vérifiez que le Worker Cloudflare est déployé et que le KV namespace est configuré.');
+    var btn = document.getElementById('loginBtn');
     btn.disabled = false;
     btn.textContent = '🔓 Accéder à l\'administration';
+    showLoginError('Impossible de joindre le Worker Cloudflare. Vérifie que le Worker est déployé et relié au domaine.');
   }
 
   btn.disabled = false;
@@ -607,12 +607,23 @@ async function apiCall(endpoint, options) {
     body: options && options.body || undefined,
   });
 
-  if (res.status === 401) {
-    document.getElementById('sessionExpired').classList.add('visible');
-    throw new Error('Non autorisé');
+  var data;
+  try {
+    data = await res.json();
+  } catch(e) {
+    throw new Error('Réponse invalide du Worker');
   }
 
-  return res.json();
+  if (res.status === 401) {
+    document.getElementById('sessionExpired').classList.add('visible');
+    throw new Error(data.error || 'Non autorisé');
+  }
+
+  if (!res.ok || data.error) {
+    throw new Error(data.error || ('Erreur Worker ' + res.status));
+  }
+
+  return data;
 }
 
 async function loadAccounts() {
@@ -639,8 +650,12 @@ async function loadAccounts() {
       tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun compte trouvé</td></tr>';
     }
   } catch(e) {
-    // Pas de fallback — le Worker DOIT répondre
-    tbody.innerHTML = '<tr><td colspan="7" class="empty" style="color:var(--red)">⚠️ Erreur de connexion au serveur.<br><br>Vérifiez que le Worker Cloudflare est bien déployé.<br>Les comptes ne peuvent PAS être gérés localement.</td></tr>';
+    accounts = [];
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">⚠️ Impossible de charger les comptes depuis le Worker/KV.<br><small>' + escapeHtml(e.message || 'Erreur réseau') + '</small></td></tr>';
+    document.getElementById('stat-clients').textContent = '0';
+    document.getElementById('stat-active').textContent = '0';
+    document.getElementById('stat-today').textContent = '0';
+    showError('Connexion au Worker impossible. Aucun compte local ne sera utilisé. Vérifie le déploiement Cloudflare/KV.');
   }
 }
 
@@ -753,8 +768,7 @@ async function createAccount(e) {
       showError(res.error || 'Erreur lors de la création');
     }
   } catch(e) {
-    // Pas de fallback local — afficher l'erreur
-    showError('⚠️ Impossible de contacter le serveur. Le compte n\'a PAS été créé. Vérifiez que le Worker Cloudflare est déployé.');
+    showError('❌ Compte NON créé : impossible de joindre le Worker/KV. Détail : ' + (e.message || 'erreur réseau'));
   }
 
   btn.disabled = false;
@@ -821,7 +835,7 @@ async function saveEdit(e) {
       showError(res.error || 'Erreur lors de la modification');
     }
   } catch(e2) {
-    showError('⚠️ Impossible de contacter le serveur. La modification n\'a PAS été enregistrée.');
+    showError('❌ Modification NON enregistrée : impossible de joindre le Worker/KV. Détail : ' + (e2.message || 'erreur réseau'));
   }
 
   return false;
@@ -854,7 +868,7 @@ async function confirmDelete() {
       showError(res.error || 'Erreur lors de la suppression');
     }
   } catch(e) {
-    showError('⚠️ Impossible de contacter le serveur. La suppression n\'a PAS été effectuée.');
+    showError('❌ Suppression NON enregistrée : impossible de joindre le Worker/KV. Détail : ' + (e.message || 'erreur réseau'));
   }
 }
 

@@ -4,7 +4,7 @@ compatibility_date = "2024-01-01"
 
 [[kv_namespaces]]
 binding = "NYXIA_KV"
-id = "9ada61c24ee0425899c14832a6be01e2"
+id = "cbfef7dc159f4cd782ccbe876ad71079"
 
 # Secrets à définir via wrangler (NE PAS mettre ici) :
 #   wrangler secret put OPENROUTER_API_KEY

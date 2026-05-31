@@ -124,7 +124,7 @@
 
   <canvas id="starry-canvas"></canvas>
   <audio id="nyxia-audio" src="/NyXiaVoix-RobotParfait1.mp3" preload="auto"></audio>
-
+   <audio id="diane-audio" src="/DianeMessage.mp3" preload="auto"></audio>
   <header>
     <div class="header-brand">
       <img src="/NyXia.png" alt="NyXia">
@@ -194,7 +194,7 @@
               <div class="chat-header-sub">Ton accompagnatrice réflexive · Miroir du Praticien™</div>
             </div>
            <button class="btn-speak" id="btn-speak" onclick="var a=document.getElementById('diane-audio');if(a.paused){a.play();this.textContent='⏸ Pause';this.classList.add('speaking')}else{a.pause();a.currentTime=0;this.textContent='🔊 Écouter Diane';this.classList.remove('speaking')}">🔊 Écouter Diane</button>
-          </div>
+                </div>
           <div class="chat-messages" id="chat-messages"></div>
           <div class="suggestions" id="suggestions">
             <button class="sugg-btn" onclick="sendSuggestion(&quot;J'ai besoin de prendre du recul&quot;)">🪞 J'ai besoin de prendre du recul</button>

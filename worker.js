@@ -457,7 +457,7 @@ async function handleLogout(request, env, headers) {
 // ============================================================
 async function handleAdminLogin(request, env, headers) {
   const { password } = await request.json();
-  const adminPass = await env.NYXIA_KV.get('admin_password') || 'NyXiaAdmin2026!';
+  const adminPass = env.ADMIN_PASSWORD || await env.NYXIA_KV.get('admin_password') || 'NyXiaAdmin2026!';
   if (password === adminPass) {
     const token = crypto.randomUUID();
     await env.NYXIA_KV.put('admin_session_' + token, 'true', { expirationTtl: 14400 });

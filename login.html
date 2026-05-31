@@ -310,7 +310,15 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: token })
         })
-        .then(function(r) { return r.json() })
+        .then(function(r) {
+        return r.json().then(function(data) {
+          data.__status = r.status;
+          data.__ok = r.ok;
+          return data;
+        }).catch(function() {
+          return { __status: r.status, __ok: r.ok, error: "Réponse invalide du serveur." };
+        });
+      })
         .then(function(data) {
           if (data.valid) window.location.href = '/dashboard.html'
         })
@@ -345,7 +353,15 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password: password })
       })
-      .then(function(r) { return r.json() })
+      .then(function(r) {
+        return r.json().then(function(data) {
+          data.__status = r.status;
+          data.__ok = r.ok;
+          return data;
+        }).catch(function() {
+          return { __status: r.status, __ok: r.ok, error: "Réponse invalide du serveur." };
+        });
+      })
       .then(function(data) {
         if (data.success && data.token) {
           sessionStorage.setItem('nyxia_token', data.token)
@@ -361,14 +377,14 @@
             window.location.href = '/dashboard.html'
           }, 1000)
         } else {
-          showMsg(data.error || 'Identifiants incorrects.', 'error')
+          showMsg(data.error || ('Identifiants incorrects. Code: ' + (data.__status || '?')), 'error')
           btn.disabled = false
           spinner.style.display = 'none'
           btnText.textContent   = 'Se connecter'
         }
       })
       .catch(function() {
-        showMsg('Erreur de connexion. Réessaie.', 'error')
+        showMsg('⚠️ Erreur : impossible de joindre le serveur NyXia. Vérifie que le Worker Cloudflare est bien déployé sur ton domaine.', 'error')
         btn.disabled = false
         spinner.style.display = 'none'
         btnText.textContent   = 'Se connecter'

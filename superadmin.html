@@ -225,6 +225,7 @@ tr:hover td{background:rgba(123,92,255,0.05)}
     </div>
     <div class="header-right">
       <span class="header-user" id="user-name">Administrateur</span>
+      <button class="btn-back" style="border-color:rgba(123,92,255,0.3);color:var(--p3);background:rgba(123,92,255,0.1);text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid;cursor:pointer" onclick="openChangePwdModal()">🔑 Mot de passe</button>
       <a href="dashboard.html" class="btn-back">← Dashboard</a>
       <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
     </div>
@@ -380,6 +381,47 @@ tr:hover td{background:rgba(123,92,255,0.05)}
       <div class="form-actions">
         <button type="submit" class="btn-primary">Enregistrer</button>
         <button type="button" class="btn-secondary" onclick="closeModal()">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change Admin Password Modal -->
+<div class="modal-overlay" id="change-pwd-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🔑 Changer le mot de passe admin</div>
+      <button class="modal-close" onclick="closeChangePwdModal()">×</button>
+    </div>
+    <div id="change-pwd-msg" class="msg" style="display:none"></div>
+    <form id="change-pwd-form" onsubmit="return saveAdminPassword(event)">
+      <div class="field" style="margin-bottom:16px">
+        <label>Mot de passe actuel</label>
+        <div class="password-wrap">
+          <input type="password" id="cpwd-current" placeholder="Votre mot de passe actuel" autocomplete="current-password">
+          <button type="button" class="password-toggle" onclick="togglePwd('cpwd-current',this)">👁️</button>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:16px">
+        <label>Nouveau mot de passe</label>
+        <div class="password-wrap">
+          <input type="password" id="cpwd-new" placeholder="Min. 8 caractères" autocomplete="new-password">
+          <button type="button" class="password-toggle" onclick="togglePwd('cpwd-new',this)">👁️</button>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:20px">
+        <label>Confirmer le nouveau mot de passe</label>
+        <div class="password-wrap">
+          <input type="password" id="cpwd-confirm" placeholder="Répéter le nouveau mot de passe" autocomplete="new-password">
+          <button type="button" class="password-toggle" onclick="togglePwd('cpwd-confirm',this)">👁️</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:16px;padding:10px;background:rgba(123,92,255,0.08);border-radius:8px">
+        ⚠️ Si <code>ADMIN_PASSWORD</code> est défini comme secret Cloudflare, ce changement s'applique uniquement dans KV et prend priorité. Pour une mise à jour permanente, utilisez aussi <code>wrangler secret put ADMIN_PASSWORD</code>.
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" id="btn-save-pwd">Changer le mot de passe</button>
+        <button type="button" class="btn-secondary" onclick="closeChangePwdModal()">Annuler</button>
       </div>
     </form>
   </div>
@@ -891,6 +933,77 @@ function showError(msg) {
 function hideMessages() {
   document.getElementById('msg-success').classList.remove('visible');
   document.getElementById('msg-error').classList.remove('visible');
+}
+
+/* ═══ CHANGEMENT MOT DE PASSE ADMIN ═══ */
+function openChangePwdModal() {
+  document.getElementById('cpwd-current').value = '';
+  document.getElementById('cpwd-new').value = '';
+  document.getElementById('cpwd-confirm').value = '';
+  var msg = document.getElementById('change-pwd-msg');
+  msg.style.display = 'none';
+  document.getElementById('change-pwd-modal').classList.add('visible');
+}
+
+function closeChangePwdModal() {
+  document.getElementById('change-pwd-modal').classList.remove('visible');
+}
+
+function showChangePwdMsg(text, type) {
+  var el = document.getElementById('change-pwd-msg');
+  el.textContent = text;
+  el.className = 'msg ' + type + ' visible';
+  el.style.display = 'block';
+}
+
+async function saveAdminPassword(e) {
+  e.preventDefault();
+  if (!requireAdminSession()) return false;
+
+  var current = document.getElementById('cpwd-current').value;
+  var newPwd  = document.getElementById('cpwd-new').value;
+  var confirm = document.getElementById('cpwd-confirm').value;
+
+  if (!current || !newPwd || !confirm) {
+    showChangePwdMsg('Tous les champs sont requis.', 'error');
+    return false;
+  }
+  if (newPwd.length < 8) {
+    showChangePwdMsg('Le nouveau mot de passe doit avoir au moins 8 caractères.', 'error');
+    return false;
+  }
+  if (newPwd !== confirm) {
+    showChangePwdMsg('Les mots de passe ne correspondent pas.', 'error');
+    return false;
+  }
+
+  var btn = document.getElementById('btn-save-pwd');
+  btn.disabled = true;
+  btn.textContent = 'Enregistrement…';
+
+  try {
+    var res = await apiCall('/api/admin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: current, newPassword: newPwd })
+    });
+
+    if (res.success) {
+      showChangePwdMsg('✅ Mot de passe modifié avec succès ! Reconnectez-vous pour confirmer.', 'success');
+      // Mettre à jour la session locale avec le nouveau token si renvoyé
+      document.getElementById('cpwd-current').value = '';
+      document.getElementById('cpwd-new').value = '';
+      document.getElementById('cpwd-confirm').value = '';
+      setTimeout(function() { closeChangePwdModal(); }, 3000);
+    } else {
+      showChangePwdMsg(res.error || 'Erreur lors du changement.', 'error');
+    }
+  } catch(err) {
+    showChangePwdMsg('❌ Impossible de joindre le Worker : ' + (err.message || 'erreur réseau'), 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Changer le mot de passe';
+  return false;
 }
 </script>
 </body>

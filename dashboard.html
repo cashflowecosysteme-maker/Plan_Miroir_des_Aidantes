@@ -153,8 +153,8 @@
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
         <div class="sidebar-label">Menu</div>
-        <div class="nav-item active" id="nav-miroir">
-          <span class="nav-icon">🪞</span> Miroir du Praticien™
+        <div class="nav-item" id="nav-miroir" onclick="showPanel('miroir')">
+          <span class="nav-icon">🪞</span> Miroir du Praticien™ <span class="nav-arrow">›</span>
         </div>
       </div>
       <div class="sidebar-bottom">
@@ -198,6 +198,26 @@
             <button class="btn-send" id="btn-send" onclick="sendMessage()">➤</button>
           </div>
           <div class="chat-hint">Entrée pour envoyer · Shift+Entrée pour un retour à la ligne</div>
+        </div>
+      </div>
+
+      <!-- Panel Miroir du Praticien -->
+      <div class="panel" id="panel-miroir">
+        <div class="chat-header" style="flex-shrink:0">
+          <span style="font-size:24px">🪞</span>
+          <div class="chat-header-info">
+            <div class="chat-header-name">Miroir du Praticien™</div>
+            <div class="chat-header-sub">Ta formation · Espace d'apprentissage</div>
+          </div>
+          <button class="btn-speak" onclick="showPanel('chat')" style="margin-left:auto">← Retour au chat</button>
+        </div>
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe
+            src="https://www.lemiroirnyxia.com/fr/login"
+            style="width:100%;height:100%;border:none;display:block"
+            allow="fullscreen"
+            title="Miroir du Praticien™"
+          ></iframe>
         </div>
       </div>
     </div>

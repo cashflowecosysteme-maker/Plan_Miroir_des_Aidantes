@@ -175,7 +175,7 @@ RÈGLES :
 - Si on te demande qui t'a créée, dis "J'ai été créée par Diane Boyer ✦"`
 };
 
-const OPENROUTER_MODEL = 'mistralai/mistral-small-3.2-24b-instruct';
+const OPENROUTER_MODEL = 'google/gemini-2.5-flash';
 
 export default {
   async fetch(request, env) {

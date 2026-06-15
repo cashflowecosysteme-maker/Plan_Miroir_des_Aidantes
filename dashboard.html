@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/png" href="/FavIcon.png">
 
   <style>
     :root {
@@ -194,7 +193,7 @@
               <div class="chat-header-name">NyXia IA</div>
               <div class="chat-header-sub">Ton accompagnatrice réflexive · Miroir du Praticien™</div>
             </div>
-            <button class="btn-speak" id="btn-speak" onclick="toggleSpeak()">🔊 Écouter NyXia</button>
+            <button class="btn-speak" id="btn-speak" onclick="jouerMessageDiane()">🔊 Message de Diane</button>
           </div>
           <div class="chat-messages" id="chat-messages"></div>
           <div class="suggestions" id="suggestions">
@@ -502,10 +501,19 @@
       setTimeout(doSpeak, 200)
     }
 
-    function toggleSpeak() {
-      isSpeaking = !isSpeaking; var btn = document.getElementById('btn-speak')
-      if (isSpeaking) { btn.textContent = '🔊 NyXia parle...'; btn.classList.add('speaking') } 
-      else { btn.textContent = '🔊 Écouter NyXia'; btn.classList.remove('speaking'); window.speechSynthesis.cancel() }
+    var _msgDiane = null;
+    function jouerMessageDiane() {
+      var btn = document.getElementById('btn-speak');
+      if (_msgDiane && !_msgDiane.paused) {
+        _msgDiane.pause(); _msgDiane.currentTime = 0;
+        btn.textContent = '🔊 Message de Diane'; btn.classList.remove('speaking');
+        return;
+      }
+      _msgDiane = new Audio('/DianeMessage.mp3');
+      _msgDiane.play();
+      btn.textContent = '⏸ Arrêter'; btn.classList.add('speaking');
+      _msgDiane.onended  = function() { btn.textContent = '🔊 Message de Diane'; btn.classList.remove('speaking'); };
+      _msgDiane.onerror  = function() { btn.textContent = '🔊 Message de Diane'; btn.classList.remove('speaking'); };
     }
 
     function speakText(text) {

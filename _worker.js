@@ -175,7 +175,7 @@ RÈGLES :
 - Si on te demande qui t'a créée, dis "J'ai été créée par Diane Boyer ✦"`
 };
 
-const OPENROUTER_MODEL = 'google/gemini-2.5-flash';
+const OPENROUTER_MODEL = 'mistralai/mistral-small-3.2-24b-instruct';
 
 export default {
   async fetch(request, env) {
@@ -363,9 +363,7 @@ async function handleChat(request, env, headers) {
   Phrase clé : "${e.phrase}"
   Étapes : ${e.etapes}
   Durée : ${e.duree}`
-        ).join('
-
-');
+        ).join('\n\n');
         messages.push({
           role: 'system',
           content: `EXERCICES MIROIR DISPONIBLES pour ce contexte (utilise-les seulement quand la personne est prête, jamais trop tôt) :
@@ -418,7 +416,9 @@ Tu peux proposer UN de ces exercices au bon moment, en le guidant avec ta voix d
     }
 
     const data = await response.json();
-    const reply = data.choices[0].message.content;
+    const msg = (data.choices && data.choices[0] && data.choices[0].message) || {};
+    const reply = (msg.content || msg.reasoning || '').trim()
+      || "Je suis là 💜 Je n'ai pas réussi à formuler ma réponse à l'instant — redis-moi ça en quelques mots ?";
     return jsonResponse({ content: reply }, headers);
 
   } catch (err) {

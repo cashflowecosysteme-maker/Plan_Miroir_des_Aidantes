@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NyXia - Co-Thérapeute & Journal de Réflexion</title>
+    <style>
+        :root {
+            --bg-dark: #03050f;
+            --bg-card: rgba(10, 22, 40, 0.6);
+            --bg-panel: rgba(14, 26, 48, 0.75);
+            --p-purple: #7B5CFF;
+            --gold: #F4C842;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: radial-gradient(circle at center, #0a1628 0%, var(--bg-dark) 100%);
+            color: var(--text);
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .stars {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* En-tête */
+        .header-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 15px rgba(123, 92, 255, 0.1);
+        }
+        .header-panel h1 {
+            margin: 0 0 6px 0;
+            font-size: 1.7rem;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(123, 92, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .header-panel p {
+            color: var(--text-dim);
+            margin: 0;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        /* ─── Scan Élite ─── */
+        .scan-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .scan-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .scan-header h2 {
+            margin: 0;
+            font-size: 1.05rem;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .scan-toggle-icon {
+            color: var(--text-dim);
+            transition: transform 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .scan-panel.open .scan-toggle-icon { transform: rotate(180deg); }
+
+        .scan-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.35s ease;
+            padding: 0 20px;
+        }
+        .scan-panel.open .scan-body {
+            max-height: 400px;
+            padding: 0 20px 20px;
+        }
+
+        .scan-axes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .scan-axe {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .scan-axe:hover { border-color: rgba(123,92,255,0.4); }
+        .scan-axe.checked {
+            background: rgba(123, 92, 255, 0.1);
+            border-color: var(--p-purple);
+        }
+        .scan-axe input { accent-color: var(--p-purple); width: 16px; height: 16px; }
+        .scan-axe label { cursor: pointer; font-size: 0.9rem; }
+
+        .btn-launch {
+            background: linear-gradient(135deg, var(--p-purple) 0%, #6344e6 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(123, 92, 255, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-launch:hover { background: #8c72ff; box-shadow: 0 4px 15px rgba(123, 92, 255, 0.5); }
+
+        .scan-summary {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        /* ─── Layout principal ─── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 860px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Chat Box */
+        .chat-box {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            height: 480px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            max-width: 82%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            animation: fadeIn 0.3s ease;
+            white-space: pre-wrap;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.agent {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            align-self: flex-start;
+            border-top-left-radius: 2px;
+        }
+        .message.user {
+            background: linear-gradient(135deg, var(--p-purple) 0%, #6344e6 100%);
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 2px;
+            box-shadow: 0 4px 12px rgba(123, 92, 255, 0.2);
+        }
+
+        .input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            background: rgba(3, 5, 15, 0.4);
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+        }
+        .input-area textarea {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text);
+            font-family: inherit;
+            resize: none;
+            height: 24px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-area textarea:focus { border-color: var(--p-purple); }
+
+        .btn-send {
+            background: transparent;
+            border: 1px solid var(--p-purple);
+            color: var(--p-purple);
+            width: 50px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        .btn-send:hover { background: var(--p-purple); color: white; }
+
+        /* Note clinique rapide */
+        .quick-note {
+            margin-top: 16px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .quick-note h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.95rem;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .quick-note textarea {
+            width: 100%;
+            height: 60px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            color: var(--text);
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            font-size: 0.88rem;
+            margin-bottom: 10px;
+        }
+        .quick-note textarea:focus { border-color: var(--p-purple); }
+        .btn-save-note {
+            background: rgba(244, 200, 66, 0.12);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-save-note:hover { background: rgba(244, 200, 66, 0.22); }
+
+        /* ─── Journal latéral ─── */
+        .journal-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            height: 480px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .journal-panel h2 {
+            margin: 0 0 14px 0;
+            font-size: 1rem;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .journal-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .journal-entry {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--p-purple);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .journal-entry .je-date {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .journal-entry .je-axes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 6px;
+        }
+        .je-axe-tag {
+            font-size: 0.68rem;
+            background: rgba(123,92,255,0.15);
+            color: #c4b5ff;
+            padding: 2px 7px;
+            border-radius: 20px;
+        }
+        .journal-entry .je-note {
+            font-size: 0.84rem;
+            color: var(--text);
+            line-height: 1.4;
+        }
+        .journal-empty {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-style: italic;
+            text-align: center;
+            padding: 30px 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stars" id="starsContainer"></div>
+
+    <div class="container">
+        <div class="header-panel">
+            <h1>🤝 Le Co-Thérapeute</h1>
+            <p>Un espace de réflexion clinique, comme entre collègues. Dépose un cas, clarifie ta lecture, garde une trace de son évolution. 📖</p>
+        </div>
+
+        <!-- Scan Élite -->
+        <div class="scan-panel open" id="scanPanel">
+            <div class="scan-header" onclick="toggleScan()">
+                <h2>🧭 Scan Élite — Axes en déséquilibre chez le client</h2>
+                <span class="scan-toggle-icon">▾</span>
+            </div>
+            <div class="scan-body">
+                <div class="scan-axes" id="scanAxes">
+                    <div class="scan-axe" data-axe="corps" onclick="toggleAxe('corps')">
+                        <input type="checkbox" id="axe-corps">
+                        <label for="axe-corps">🫀 Corps</label>
+                    </div>
+                    <div class="scan-axe" data-axe="emotions" onclick="toggleAxe('emotions')">
+                        <input type="checkbox" id="axe-emotions">
+                        <label for="axe-emotions">💧 Émotions</label>
+                    </div>
+                    <div class="scan-axe" data-axe="mental" onclick="toggleAxe('mental')">
+                        <input type="checkbox" id="axe-mental">
+                        <label for="axe-mental">🧠 Mental</label>
+                    </div>
+                    <div class="scan-axe" data-axe="relation" onclick="toggleAxe('relation')">
+                        <input type="checkbox" id="axe-relation">
+                        <label for="axe-relation">🪞 Relation à soi</label>
+                    </div>
+                </div>
+                <button class="btn-launch" onclick="launchDiscussion()">✦ Lancer la discussion avec ce scan</button>
+                <div class="scan-summary" id="scanSummary" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div>
+                <!-- Chat -->
+                <div class="chat-box">
+                    <div class="messages-container" id="messagesContainer">
+                        <div class="message agent">
+                            🤝 Bonjour. Coche les axes du Scan Élite qui te semblent en déséquilibre chez ton client, puis dépose ici ce qui t'amène à réfléchir sur ce cas.
+                        </div>
+                    </div>
+                    <div class="input-area">
+                        <textarea id="userInput" placeholder="Décris la situation clinique..." onkeydown="handleKeyPress(event)"></textarea>
+                        <button class="btn-send" onclick="sendMessage()">✦</button>
+                    </div>
+                </div>
+
+                <!-- Note clinique rapide -->
+                <div class="quick-note">
+                    <h3>📝 Note clinique rapide</h3>
+                    <textarea id="noteInput" placeholder="Résume ce que tu veux garder en mémoire sur ce cas..."></textarea>
+                    <button class="btn-save-note" onclick="saveNote()">💾 Enregistrer dans le journal</button>
+                </div>
+            </div>
+
+            <!-- Journal latéral -->
+            <div class="journal-panel">
+                <h2>📖 Journal de Réflexion</h2>
+                <div class="journal-list" id="journalList">
+                    <div class="journal-empty">Chargement du journal...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Étoiles de fond
+        const starsContainer = document.getElementById('starsContainer');
+        for (let i = 0; i < 60; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.top = Math.random() * 100 + 'vh';
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.animationDelay = Math.random() * 3 + 's';
+            starsContainer.appendChild(star);
+        }
+
+        const sessionToken = sessionStorage.getItem('nyxia_token') || '';
+
+        /* ─── Scan Élite ─── */
+        const scanState = { corps: false, emotions: false, mental: false, relation: false };
+        const axeLabels = { corps: '🫀 Corps', emotions: '💧 Émotions', mental: '🧠 Mental', relation: '🪞 Relation à soi' };
+
+        function toggleScan() {
+            document.getElementById('scanPanel').classList.toggle('open');
+        }
+
+        function toggleAxe(axe) {
+            scanState[axe] = !scanState[axe];
+            const checkbox = document.getElementById('axe-' + axe);
+            checkbox.checked = scanState[axe];
+            document.querySelector('.scan-axe[data-axe="' + axe + '"]').classList.toggle('checked', scanState[axe]);
+            updateScanSummary();
+        }
+
+        function updateScanSummary() {
+            const actifs = Object.keys(scanState).filter(k => scanState[k]);
+            const el = document.getElementById('scanSummary');
+            el.textContent = actifs.length ? 'Axes cochés : ' + actifs.map(a => axeLabels[a]).join(', ') : 'Aucun axe coché pour l\'instant.';
+        }
+
+        function buildScanContext() {
+            const actifs = Object.keys(scanState).filter(k => scanState[k]);
+            if (!actifs.length) return '';
+            return 'Axes en déséquilibre identifiés par la praticienne chez son client : ' + actifs.map(a => axeLabels[a]).join(', ') + '.';
+        }
+
+        function launchDiscussion() {
+            updateScanSummary();
+            document.getElementById('scanPanel').classList.remove('open');
+            document.getElementById('userInput').focus();
+        }
+
+        /* ─── Chat ─── */
+        function handleKeyPress(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            executeMessageSend(text);
+        }
+
+        let chatHistory = [];
+
+        async function executeMessageSend(text) {
+            const container = document.getElementById('messagesContainer');
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            userDiv.innerText = text;
+            container.appendChild(userDiv);
+            container.scrollTop = container.scrollHeight;
+            chatHistory.push({ role: 'user', content: text });
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message agent';
+            loadingDiv.innerText = '🤝 Le co-thérapeute réfléchit...';
+            container.appendChild(loadingDiv);
+            container.scrollTop = container.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        history: chatHistory.slice(-10),
+                        agent: 'cotherapeute',
+                        context: buildScanContext()
+                    })
+                });
+
+                const data = await response.json();
+                const reply = data.content || "Le co-thérapeute reste silencieux. Vérifie la connexion avec ton Worker.";
+                loadingDiv.innerText = reply;
+                chatHistory.push({ role: 'assistant', content: reply });
+            } catch (error) {
+                loadingDiv.innerText = "🤝 Une ombre s'est glissée dans la connexion. Assure-toi que l'URL de ton API est bien configurée.";
+            }
+            container.scrollTop = container.scrollHeight;
+        }
+
+        /* ─── Note clinique rapide + Journal ─── */
+        async function saveNote() {
+            const noteInput = document.getElementById('noteInput');
+            const note = noteInput.value.trim();
+            if (!note) return;
+
+            if (!sessionToken) {
+                alert('Session introuvable — retourne au tableau de bord et réessaie.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/journal/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: sessionToken,
+                        entry: { scan: { ...scanState }, note: note }
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    noteInput.value = '';
+                    loadJournal();
+                } else {
+                    alert('Impossible d\'enregistrer la note pour le moment.');
+                }
+            } catch (error) {
+                alert('Erreur de connexion au journal.');
+            }
+        }
+
+        function formatDate(ts) {
+            const d = new Date(ts);
+            return d.toLocaleDateString('fr-CA', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function loadJournal() {
+            const listEl = document.getElementById('journalList');
+            if (!sessionToken) {
+                listEl.innerHTML = '<div class="journal-empty">Session requise pour afficher le journal.</div>';
+                return;
+            }
+            try {
+                const response = await fetch('/api/journal/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: sessionToken })
+                });
+                const data = await response.json();
+                const entries = (data && data.entries) || [];
+                if (!entries.length) {
+                    listEl.innerHTML = '<div class="journal-empty">Aucune note enregistrée pour l\'instant.</div>';
+                    return;
+                }
+                listEl.innerHTML = entries.map(e => {
+                    const axesActifs = e.scan ? Object.keys(e.scan).filter(k => e.scan[k]) : [];
+                    const tags = axesActifs.map(a => '<span class="je-axe-tag">' + (axeLabels[a] || a) + '</span>').join('');
+                    return '<div class="journal-entry">' +
+                        '<div class="je-date">' + formatDate(e.date) + '</div>' +
+                        (tags ? '<div class="je-axes">' + tags + '</div>' : '') +
+                        '<div class="je-note">' + e.note.replace(/</g, '&lt;') + '</div>' +
+                    '</div>';
+                }).join('');
+            } catch (error) {
+                listEl.innerHTML = '<div class="journal-empty">Impossible de charger le journal.</div>';
+            }
+        }
+
+        loadJournal();
+    </script>
+</body>
+</html>

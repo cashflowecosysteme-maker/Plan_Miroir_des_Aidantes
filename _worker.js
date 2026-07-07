@@ -296,6 +296,17 @@ export default {
         return handleExercicesList(request, env, corsHeaders);
       }
 
+      // ═══ JOURNAL DE RÉFLEXION (espace personnel de la praticienne) ═══
+      if (path === '/api/reflexion/save' && request.method === 'POST') {
+        return handleReflexionSave(request, env, corsHeaders);
+      }
+      if (path === '/api/reflexion/list' && request.method === 'POST') {
+        return handleReflexionList(request, env, corsHeaders);
+      }
+      if (path === '/api/reflexion/delete' && request.method === 'POST') {
+        return handleReflexionDelete(request, env, corsHeaders);
+      }
+
       // ═══ ADMIN AUTH ═══
       if (path === '/api/admin/login' && request.method === 'POST') {
         return handleAdminLogin(request, env, corsHeaders);
@@ -693,6 +704,69 @@ async function handleExercicesList(request, env, headers) {
   const entries = existingRaw ? JSON.parse(existingRaw) : [];
 
   return jsonResponse({ success: true, entries }, headers);
+}
+
+// ============================================================
+//  JOURNAL DE RÉFLEXION (espace personnel de la praticienne)
+// ============================================================
+
+async function handleReflexionSave(request, env, headers) {
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonResponse({ error: 'Requête invalide' }, headers, 400); }
+
+  const { token, entry } = body;
+  const email = await getSessionEmail(token, env);
+  if (!email) return jsonResponse({ error: 'Session invalide' }, headers, 401);
+  if (!entry || (!entry.exercice && !entry.note)) return jsonResponse({ error: 'Entrée vide' }, headers, 400);
+
+  const kvKey = 'reflexion_' + email;
+  const existingRaw = await env.Miroir_des_Aidantes.get(kvKey);
+  const entries = existingRaw ? JSON.parse(existingRaw) : [];
+
+  const newEntry = {
+    id: crypto.randomUUID(),
+    date: Date.now(),
+    exercice: entry.exercice || '',
+    note: entry.note || '',
+    source: entry.source || 'manuel',
+  };
+  entries.unshift(newEntry);
+
+  await env.Miroir_des_Aidantes.put(kvKey, JSON.stringify(entries));
+  return jsonResponse({ success: true, entry: newEntry }, headers);
+}
+
+async function handleReflexionList(request, env, headers) {
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonResponse({ error: 'Requête invalide' }, headers, 400); }
+
+  const { token } = body;
+  const email = await getSessionEmail(token, env);
+  if (!email) return jsonResponse({ error: 'Session invalide' }, headers, 401);
+
+  const kvKey = 'reflexion_' + email;
+  const existingRaw = await env.Miroir_des_Aidantes.get(kvKey);
+  const entries = existingRaw ? JSON.parse(existingRaw) : [];
+
+  return jsonResponse({ success: true, entries }, headers);
+}
+
+async function handleReflexionDelete(request, env, headers) {
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonResponse({ error: 'Requête invalide' }, headers, 400); }
+
+  const { token, id } = body;
+  const email = await getSessionEmail(token, env);
+  if (!email) return jsonResponse({ error: 'Session invalide' }, headers, 401);
+  if (!id) return jsonResponse({ error: 'Identifiant manquant' }, headers, 400);
+
+  const kvKey = 'reflexion_' + email;
+  const existingRaw = await env.Miroir_des_Aidantes.get(kvKey);
+  let entries = existingRaw ? JSON.parse(existingRaw) : [];
+  entries = entries.filter(e => e.id !== id);
+
+  await env.Miroir_des_Aidantes.put(kvKey, JSON.stringify(entries));
+  return jsonResponse({ success: true }, headers);
 }
 
 // ============================================================

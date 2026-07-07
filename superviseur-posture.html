@@ -361,12 +361,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: text,
-                        mode: 'superviseur' // IMPORTANT : Indique au worker d'appeler le prompt de supervision
+                        agent: 'superviseur' // IMPORTANT : Indique au worker d'appeler le prompt de supervision
                     })
                 });
 
                 const data = await response.json();
-                loadingDiv.innerText = data.reply || data.response || "Le miroir reste silencieux. Vérifie la connexion avec ton Worker.";
+                loadingDiv.innerText = data.content || "Le miroir reste silencieux. Vérifie la connexion avec ton Worker.";
             } catch (error) {
                 loadingDiv.innerText = "👁️‍🗨️ Une ombre s'est glissée dans la connexion. Assure-toi que l'URL de ton API est bien configurée.";
             }

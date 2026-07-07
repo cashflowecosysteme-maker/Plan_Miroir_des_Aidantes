@@ -496,9 +496,26 @@
       var pdfBtn = document.createElement('button'); pdfBtn.style.cssText = bs; pdfBtn.textContent = '⬇ PDF'
       pdfBtn.addEventListener('click', function() { var w = window.open('', '_blank'); if (!w) return; var body = '<h2 style="color:#7B5CFF">NyXia IA</h2>' + escHtml(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); w.document.write('<!DOCTYPE html><html><head><title>NyXia</title><style>body{font-family:Georgia,serif;max-width:760px;margin:48px auto;line-height:1.85}</style></head><body>' + body + '</body></html>'); w.document.close(); setTimeout(function() { w.print() }, 300) }); acts.appendChild(pdfBtn)
 
+      var jrnBtn = document.createElement('button'); jrnBtn.style.cssText = bs; jrnBtn.textContent = '📖 Journal'
+      jrnBtn.addEventListener('click', function() { saveToReflexion(textForSpeak, jrnBtn) }); acts.appendChild(jrnBtn)
+
       wrapper.appendChild(acts)
       div.appendChild(wrapper)
       msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight
+    }
+
+    function saveToReflexion(texte, btnEl) {
+      if (!sessionToken) { if (btnEl) { btnEl.textContent = '⚠ Session'; setTimeout(function() { btnEl.textContent = '📖 Journal' }, 2000) } return }
+      if (btnEl) btnEl.textContent = '…'
+      fetch('/api/reflexion/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sessionToken, entry: { exercice: texte, note: '', source: 'chat' } })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (btnEl) { btnEl.textContent = data.success ? '✓ Ajouté' : '⚠ Erreur'; setTimeout(function() { btnEl.textContent = '📖 Journal' }, 2000) }
+      })
+      .catch(function() { if (btnEl) { btnEl.textContent = '⚠ Erreur'; setTimeout(function() { btnEl.textContent = '📖 Journal' }, 2000) } })
     }
 
     function addUserMessage(text) {

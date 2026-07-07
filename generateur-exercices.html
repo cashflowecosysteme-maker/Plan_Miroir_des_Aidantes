@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NyXia - Générateur d'Exercices Sur-Mesure</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #03050f;
+            --bg-card: rgba(10, 22, 40, 0.6);
+            --bg-panel: rgba(14, 26, 48, 0.75);
+            --p-purple: #7B5CFF;
+            --gold: #F4C842;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: radial-gradient(ellipse at top, #0f1c38 0%, var(--bg-dark) 65%);
+            color: var(--text);
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .stars {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+        }
+        .glyph {
+            position: absolute;
+            color: rgba(123, 92, 255, 0.08);
+            font-size: 3rem;
+            pointer-events: none;
+            z-index: 0;
+            user-select: none;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 22px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 20px rgba(244, 200, 66, 0.06);
+        }
+        .header-panel h1 {
+            margin: 0 0 8px 0;
+            font-size: 1.8rem;
+            color: #fff;
+            text-shadow: 0 0 12px rgba(244, 200, 66, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .header-panel p {
+            color: var(--text-dim);
+            margin: 0;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        /* ─── Zone de Configuration ─── */
+        .config-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            margin-bottom: 22px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+        .config-panel h2 {
+            margin: 0 0 16px 0;
+            font-size: 1.05rem;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .objectifs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .objectif-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .objectif-card:hover {
+            border-color: rgba(123,92,255,0.4);
+            transform: translateY(-2px);
+        }
+        .objectif-card.selected {
+            background: linear-gradient(160deg, rgba(123,92,255,0.15), rgba(244,200,66,0.06));
+            border-color: var(--p-purple);
+            box-shadow: 0 0 20px rgba(123,92,255,0.25);
+        }
+        .objectif-icon { font-size: 1.8rem; margin-bottom: 8px; display: block; }
+        .objectif-name { font-size: 0.9rem; font-weight: bold; }
+        .objectif-desc { font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; }
+
+        .contexte-input {
+            width: 100%;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: var(--text);
+            font-family: inherit;
+            resize: none;
+            height: 60px;
+            outline: none;
+            font-size: 0.88rem;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        .contexte-input:focus { border-color: var(--p-purple); }
+
+        .btn-generer {
+            background: linear-gradient(135deg, var(--p-purple) 0%, #6344e6 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: bold;
+            box-shadow: 0 4px 16px rgba(123, 92, 255, 0.35);
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .btn-generer:hover:not(:disabled) { background: #8c72ff; box-shadow: 0 4px 20px rgba(123, 92, 255, 0.5); }
+        .btn-generer:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ─── Zone de Génération ─── */
+        .generation-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 26px;
+            margin-bottom: 22px;
+            min-height: 180px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            display: none;
+        }
+        .generation-panel.visible { display: block; }
+        .generation-panel.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+            font-style: italic;
+        }
+        .protocole-content {
+            white-space: pre-wrap;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+        .protocole-badge {
+            display: inline-block;
+            background: rgba(244, 200, 66, 0.12);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            font-size: 0.72rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 14px;
+        }
+
+        /* ─── Zone d'Action ─── */
+        .actions-panel {
+            display: none;
+            gap: 12px;
+            margin-bottom: 26px;
+            flex-wrap: wrap;
+        }
+        .actions-panel.visible { display: flex; }
+        .btn-action {
+            flex: 1;
+            min-width: 180px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-action:hover { border-color: var(--p-purple); background: rgba(123,92,255,0.1); }
+        .btn-action.gold:hover { border-color: var(--gold); background: rgba(244,200,66,0.1); }
+
+        /* ─── Protocoles sauvegardés ─── */
+        .saved-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 22px;
+        }
+        .saved-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+        .saved-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .saved-toggle-icon { color: var(--text-dim); transition: transform 0.3s ease; }
+        .saved-panel.open .saved-toggle-icon { transform: rotate(180deg); }
+        .saved-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+        }
+        .saved-panel.open .saved-list {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        .saved-entry {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--gold);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+        }
+        .saved-entry .se-meta {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .saved-empty {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-style: italic;
+            text-align: center;
+            padding: 20px 10px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(15,28,63,0.95);
+            border: 1px solid var(--p-purple);
+            color: var(--text);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+    <div class="stars" id="starsContainer"></div>
+    <div class="glyph" style="top:10%; left:5%;">✦</div>
+    <div class="glyph" style="top:60%; right:6%;">🜂</div>
+    <div class="glyph" style="bottom:8%; left:10%;">🜄</div>
+
+    <div class="container">
+        <div class="header-panel">
+            <h1>🪄 Le Générateur d'Exercices Sur-Mesure</h1>
+            <p>Choisis l'intention, dépose le contexte, et laisse l'alchimie composer un protocole prêt pour ta cliente. ✦</p>
+        </div>
+
+        <!-- Zone de Configuration -->
+        <div class="config-panel">
+            <h2>🧭 Zone de Configuration</h2>
+            <div class="objectifs-grid" id="objectifsGrid">
+                <div class="objectif-card" data-objectif="ancrage">
+                    <span class="objectif-icon">🌳</span>
+                    <div class="objectif-name">Ancrage</div>
+                    <div class="objectif-desc">Reconnexion au corps, stabilité</div>
+                </div>
+                <div class="objectif-card" data-objectif="liberation">
+                    <span class="objectif-icon">💧</span>
+                    <div class="objectif-name">Libération émotionnelle</div>
+                    <div class="objectif-desc">Décharge, expression, allègement</div>
+                </div>
+                <div class="objectif-card" data-objectif="recadrage">
+                    <span class="objectif-icon">🧠</span>
+                    <div class="objectif-name">Recadrage mental</div>
+                    <div class="objectif-desc">Nouvelle perspective, clarté</div>
+                </div>
+                <div class="objectif-card" data-objectif="coherence">
+                    <span class="objectif-icon">✦</span>
+                    <div class="objectif-name">Cohérence</div>
+                    <div class="objectif-desc">Alignement, respiration, unité</div>
+                </div>
+            </div>
+            <textarea class="contexte-input" id="contexteInput" placeholder="Détails optionnels sur la situation du client (contexte, déclencheur, ce qui a déjà été essayé...)"></textarea>
+            <button class="btn-generer" id="btnGenerer" onclick="genererProtocole()" disabled>🪄 Générer le protocole</button>
+        </div>
+
+        <!-- Zone de Génération -->
+        <div class="generation-panel" id="generationPanel">
+            <div id="protocoleBadgeWrap"></div>
+            <div class="protocole-content" id="protocoleContent"></div>
+        </div>
+
+        <!-- Zone d'Action -->
+        <div class="actions-panel" id="actionsPanel">
+            <button class="btn-action" onclick="copierProtocole()">📋 Copier le protocole pour le client</button>
+            <button class="btn-action gold" onclick="genererPDF()">📄 Générer la fiche PDF</button>
+            <button class="btn-action" onclick="sauvegarderProtocole()">💾 Sauvegarder dans mes outils</button>
+        </div>
+
+        <!-- Protocoles sauvegardés -->
+        <div class="saved-panel" id="savedPanel">
+            <div class="saved-header" onclick="toggleSaved()">
+                <h2>🗂️ Mes outils sauvegardés</h2>
+                <span class="saved-toggle-icon">▾</span>
+            </div>
+            <div class="saved-list" id="savedList">
+                <div class="saved-empty">Chargement...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Étoiles de fond
+        const starsContainer = document.getElementById('starsContainer');
+        for (let i = 0; i < 60; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.top = Math.random() * 100 + 'vh';
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.animationDelay = Math.random() * 3 + 's';
+            starsContainer.appendChild(star);
+        }
+
+        const sessionToken = sessionStorage.getItem('nyxia_token') || '';
+
+        const objectifLabels = {
+            ancrage: '🌳 Ancrage',
+            liberation: '💧 Libération émotionnelle',
+            recadrage: '🧠 Recadrage mental',
+            coherence: '✦ Cohérence'
+        };
+
+        let objectifSelectionne = null;
+        let dernierProtocole = '';
+
+        document.querySelectorAll('.objectif-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.objectif-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                objectifSelectionne = card.dataset.objectif;
+                document.getElementById('btnGenerer').disabled = false;
+            });
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        async function genererProtocole() {
+            if (!objectifSelectionne) return;
+            const btn = document.getElementById('btnGenerer');
+            const panel = document.getElementById('generationPanel');
+            const contenu = document.getElementById('protocoleContent');
+            const badgeWrap = document.getElementById('protocoleBadgeWrap');
+            const actionsPanel = document.getElementById('actionsPanel');
+
+            btn.disabled = true;
+            panel.classList.add('visible', 'loading');
+            actionsPanel.classList.remove('visible');
+            contenu.textContent = '';
+            badgeWrap.innerHTML = '';
+            panel.innerHTML = '<div>🪄 L\'alchimie compose ton protocole...</div>';
+
+            const contexte = document.getElementById('contexteInput').value.trim();
+            const contextMsg = 'Objectif choisi : ' + objectifLabels[objectifSelectionne] + (contexte ? '. Contexte donné par la praticienne : ' + contexte : '.');
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: 'Génère un protocole d\'exercice pour cet objectif.',
+                        agent: 'generateur',
+                        context: contextMsg
+                    })
+                });
+                const data = await response.json();
+                const reply = data.content || "L'alchimie est restée silencieuse. Vérifie la connexion avec ton Worker.";
+                dernierProtocole = reply;
+
+                panel.classList.remove('loading');
+                panel.innerHTML = '<div id="protocoleBadgeWrap"></div><div class="protocole-content" id="protocoleContent"></div>';
+                document.getElementById('protocoleBadgeWrap').innerHTML = '<span class="protocole-badge">' + objectifLabels[objectifSelectionne] + '</span>';
+                document.getElementById('protocoleContent').textContent = reply;
+                actionsPanel.classList.add('visible');
+            } catch (error) {
+                panel.classList.remove('loading');
+                panel.innerHTML = '<div>🪄 Une ombre s\'est glissée dans la connexion. Assure-toi que l\'URL de ton API est bien configurée.</div>';
+            }
+            btn.disabled = false;
+        }
+
+        function copierProtocole() {
+            if (!dernierProtocole) return;
+            navigator.clipboard.writeText(dernierProtocole).then(() => {
+                showToast('📋 Protocole copié dans le presse-papier');
+            }).catch(() => {
+                showToast('Impossible de copier automatiquement.');
+            });
+        }
+
+        function genererPDF() {
+            if (!dernierProtocole) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+            doc.setFillColor(10, 22, 40);
+            doc.rect(0, 0, 210, 297, 'F');
+
+            doc.setTextColor(244, 200, 66);
+            doc.setFontSize(18);
+            doc.text('NyXia — Fiche d\'exercice', 20, 25);
+
+            doc.setTextColor(148, 163, 184);
+            doc.setFontSize(10);
+            const objTxt = objectifSelectionne ? objectifLabels[objectifSelectionne].replace(/[^\x00-\x7F]/g, '').trim() : '';
+            doc.text('Objectif : ' + objTxt, 20, 33);
+
+            doc.setDrawColor(123, 92, 255);
+            doc.line(20, 38, 190, 38);
+
+            doc.setTextColor(226, 232, 240);
+            doc.setFontSize(11);
+            const texteNettoye = dernierProtocole.replace(/[✦💜🚀💎🌐📱⭐✓►▶🪄🌙🌳💧🧠🕯️]/g, '');
+            const lignes = doc.splitTextToSize(texteNettoye, 170);
+            doc.text(lignes, 20, 48);
+
+            doc.setTextColor(148, 163, 184);
+            doc.setFontSize(8);
+            doc.text('© NyXia IA — Créée par Diane Boyer', 20, 285);
+
+            doc.save('NyXia-Exercice-' + (objectifSelectionne || 'protocole') + '.pdf');
+            showToast('📄 Fiche PDF téléchargée');
+        }
+
+        async function sauvegarderProtocole() {
+            if (!dernierProtocole) return;
+            if (!sessionToken) {
+                showToast('Session introuvable — retourne au tableau de bord.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/exercices/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: sessionToken,
+                        protocole: {
+                            objectif: objectifSelectionne ? objectifLabels[objectifSelectionne] : '',
+                            contenu: dernierProtocole
+                        }
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('💾 Protocole sauvegardé dans tes outils');
+                    loadSavedProtocoles();
+                } else {
+                    showToast('Impossible de sauvegarder pour le moment.');
+                }
+            } catch (error) {
+                showToast('Erreur de connexion.');
+            }
+        }
+
+        function toggleSaved() {
+            document.getElementById('savedPanel').classList.toggle('open');
+        }
+
+        function formatDate(ts) {
+            const d = new Date(ts);
+            return d.toLocaleDateString('fr-CA', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function loadSavedProtocoles() {
+            const listEl = document.getElementById('savedList');
+            if (!sessionToken) {
+                listEl.innerHTML = '<div class="saved-empty">Session requise pour afficher tes outils.</div>';
+                return;
+            }
+            try {
+                const response = await fetch('/api/exercices/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: sessionToken })
+                });
+                const data = await response.json();
+                const entries = (data && data.entries) || [];
+                if (!entries.length) {
+                    listEl.innerHTML = '<div class="saved-empty">Aucun protocole sauvegardé pour l\'instant.</div>';
+                    return;
+                }
+                listEl.innerHTML = entries.map(e =>
+                    '<div class="saved-entry">' +
+                        '<div class="se-meta">' + formatDate(e.date) + (e.objectif ? ' · ' + e.objectif : '') + '</div>' +
+                        '<div>' + e.contenu.replace(/</g, '&lt;').slice(0, 160) + (e.contenu.length > 160 ? '…' : '') + '</div>' +
+                    '</div>'
+                ).join('');
+            } catch (error) {
+                listEl.innerHTML = '<div class="saved-empty">Impossible de charger tes outils.</div>';
+            }
+        }
+
+        loadSavedProtocoles();
+    </script>
+</body>
+</html>

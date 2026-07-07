@@ -156,6 +156,9 @@
         <div class="nav-item" id="nav-superviseur" onclick="showPanel('superviseur')">
           <span class="nav-icon">🩺</span> Superviseur Posture <span class="nav-arrow">›</span>
         </div>
+        <div class="nav-item" id="nav-cotherapeute" onclick="showPanel('cotherapeute')">
+          <span class="nav-icon">🤝</span> Co-Thérapeute <span class="nav-arrow">›</span>
+        </div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
@@ -263,6 +266,13 @@
       <div class="panel" id="panel-superviseur" style="flex-direction:column">
         <div style="flex:1;overflow:hidden;position:relative">
           <iframe src="/superviseur-posture.html" style="width:100%;height:100%;border:none;display:block" title="Superviseur Posture"></iframe>
+        </div>
+      </div>
+
+      <!-- Panel Co-Thérapeute — iframe -->
+      <div class="panel" id="panel-cotherapeute" style="flex-direction:column">
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe src="/co-therapeute.html" style="width:100%;height:100%;border:none;display:block" title="Co-Thérapeute"></iframe>
         </div>
       </div>
     </div>

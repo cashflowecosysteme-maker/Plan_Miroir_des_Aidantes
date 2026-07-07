@@ -154,6 +154,9 @@
       <div class="sidebar-section">
         <div class="sidebar-label">Outils Cliniques</div>
       <div class="sidebar-section">
+          <div class="nav-item" id="agent-posture" onclick="showPanel('neuro')">
+          <span class="nav-icon">✨</span> Le Superviseur de Posture <span class="nav-arrow">›</span>
+        </div>
         <div class="sidebar-label">Mon Parcours</div>
         <div class="nav-item" id="nav-miroir" onclick="showPanel('miroir')">
           <span class="nav-icon">🪞</span> Mon Espace Miroir <span class="nav-arrow">›</span>
@@ -223,6 +226,13 @@
       <div class="panel" id="panel-miroir" style="flex-direction:column">
         <div style="flex:1;overflow:hidden;position:relative">
           <iframe src="/miroir-praticien.html" style="width:100%;height:100%;border:none;display:block" title="Mon Espace Miroir"></iframe>
+        </div>
+      </div>
+
+       <!-- Panel Outils Cliniques — iframe -->
+      <div class="panel" id="panel-outils" style="flex-direction:column">
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe src="/superviseurdeposture.html" style="width:100%;height:100%;border:none;display:block" title="Superviseur de Posture"></iframe>
         </div>
       </div>
 

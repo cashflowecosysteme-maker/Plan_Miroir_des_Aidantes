@@ -307,11 +307,6 @@ export default {
         return handleReflexionDelete(request, env, corsHeaders);
       }
 
-      // ═══ TEST TEMPORAIRE — clonage vocal (à retirer une fois validé) ═══
-      if (path === '/api/test/voice-clone' && request.method === 'POST') {
-        return handleTestVoiceClone(request, env, corsHeaders);
-      }
-
       // ═══ ADMIN AUTH ═══
       if (path === '/api/admin/login' && request.method === 'POST') {
         return handleAdminLogin(request, env, corsHeaders);
@@ -775,129 +770,8 @@ async function handleReflexionDelete(request, env, headers) {
 }
 
 // ============================================================
-//  TEST TEMPORAIRE — CLONAGE VOCAL (à retirer une fois validé)
+//  ADMIN AUTH
 // ============================================================
-async function handleTestVoiceClone(request, env, headers) {
-  let body;
-  try { body = await request.json(); } catch(e) { return jsonResponse({ error: 'Requête invalide' }, headers, 400); }
-
-  const { audio_url, confirm } = body;
-  if (confirm !== 'diane-test') {
-    return jsonResponse({ error: 'Confirmation manquante — envoie confirm: "diane-test"' }, headers, 400);
-  }
-  if (!audio_url) {
-    return jsonResponse({ error: 'audio_url manquant' }, headers, 400);
-  }
-
-  const apiKey = env.MINIMAX_API_KEY;
-  if (!apiKey) {
-    return jsonResponse({ error: 'MINIMAX_API_KEY non configurée dans les secrets Cloudflare' }, headers, 500);
-  }
-
-  const diagnostic = { etape1_telechargement: null, etape2_upload: null, etape3_clonage: null, etape4_synthese: null };
-
-  try {
-    // Étape 1 — télécharger l'échantillon depuis l'URL fournie
-    const audioResp = await fetch(audio_url);
-    if (!audioResp.ok) {
-      diagnostic.etape1_telechargement = { ok: false, status: audioResp.status };
-      return jsonResponse({ diagnostic }, headers);
-    }
-    const audioBlob = await audioResp.blob();
-    diagnostic.etape1_telechargement = { ok: true, taille_octets: audioBlob.size };
-
-    // Étape 2 — upload vers MiniMax (API officielle)
-    const uploadForm = new FormData();
-    uploadForm.append('file', audioBlob, 'echantillon.mp3');
-    uploadForm.append('purpose', 'voice_clone');
-
-    const uploadResp = await fetch('https://api.minimax.io/v1/files/upload', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}` },
-      body: uploadForm,
-    });
-    const uploadText = await uploadResp.text();
-    diagnostic.etape2_upload = { ok: uploadResp.ok, status: uploadResp.status, reponse: uploadText.slice(0, 800) };
-
-    if (!uploadResp.ok) return jsonResponse({ diagnostic }, headers);
-
-    let fileId;
-    try {
-      const uploadJson = JSON.parse(uploadText);
-      fileId = (uploadJson.file && uploadJson.file.file_id) || uploadJson.file_id;
-    } catch(e) {}
-    if (!fileId) {
-      diagnostic.etape2_upload.erreur = 'file_id introuvable dans la réponse';
-      return jsonResponse({ diagnostic }, headers);
-    }
-
-    // Étape 3 — cloner la voix
-    const cloneResp = await fetch('https://api.minimax.io/v1/voice_clone', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        file_id: fileId,
-        voice_id: 'diane_boyer_nyxia_test',
-        text: 'Ceci est un test de ma voix clonée pour NyXia.',
-        model: 'speech-2.6-hd',
-      }),
-    });
-    const cloneText = await cloneResp.text();
-    diagnostic.etape3_clonage = { ok: cloneResp.ok, status: cloneResp.status, reponse: cloneText.slice(0, 800) };
-
-    if (!cloneResp.ok) return jsonResponse({ diagnostic }, headers);
-
-    // Étape 4 — synthèse test avec la voix clonée
-    const ttsResp = await fetch('https://api.minimax.io/v1/t2a_v2', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'speech-2.6-hd',
-        text: 'Bonjour, je suis NyXia, et voici ma voix.',
-        voice_setting: { voice_id: 'diane_boyer_nyxia_test' },
-      }),
-    });
-
-    if (!ttsResp.ok) {
-      const ttsErrText = await ttsResp.text();
-      diagnostic.etape4_synthese = { ok: false, status: ttsResp.status, reponse: ttsErrText.slice(0, 800) };
-      return jsonResponse({ diagnostic }, headers);
-    }
-
-    // L'API officielle MiniMax renvoie du JSON avec l'audio encodé en hex (pas du binaire brut)
-    const ttsRawText = await ttsResp.text();
-    let base64Audio = null;
-    let tailleAudio = 0;
-    try {
-      const ttsJson = JSON.parse(ttsRawText);
-      const hexAudio = ttsJson.data && ttsJson.data.audio;
-      if (hexAudio) {
-        const bytes = new Uint8Array(hexAudio.length / 2);
-        for (let i = 0; i < hexAudio.length; i += 2) bytes[i / 2] = parseInt(hexAudio.substr(i, 2), 16);
-        base64Audio = btoa(String.fromCharCode(...bytes));
-        tailleAudio = bytes.length;
-      } else {
-        diagnostic.etape4_synthese = { ok: false, reponse_brute: ttsRawText.slice(0, 800), erreur: 'Pas de champ data.audio trouvé' };
-        return jsonResponse({ diagnostic }, headers);
-      }
-    } catch (e) {
-      diagnostic.etape4_synthese = { ok: false, reponse_brute: ttsRawText.slice(0, 800), erreur: 'Réponse non-JSON, format inattendu' };
-      return jsonResponse({ diagnostic }, headers);
-    }
-
-    diagnostic.etape4_synthese = { ok: true, taille_octets: tailleAudio };
-
-    return jsonResponse({
-      diagnostic,
-      succes: true,
-      audio_base64: base64Audio,
-      message: 'Clonage réussi ! Le lecteur audio de la page de test va jouer directement ta voix clonée.'
-    }, headers);
-
-  } catch (err) {
-    return jsonResponse({ diagnostic, erreur: err.message }, headers, 500);
-  }
-}
 async function handleAdminLogin(request, env, headers) {
   let body;
   try {

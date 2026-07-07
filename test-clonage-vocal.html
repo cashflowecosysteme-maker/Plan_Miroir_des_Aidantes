@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Test Clonage Vocal NyXia</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; background: #0a1628; color: #e2e8f0; }
+  h1 { color: #F4C842; font-size: 1.4rem; }
+  button { background: #7B5CFF; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 20px 0; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  pre { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
+  audio { width: 100%; margin-top: 16px; }
+  .status { font-size: 14px; color: #94a3b8; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+  <h1>🔮 Test du clonage vocal NyXia</h1>
+  <p class="status">Domaine testé : <strong>aidants.lemiroirnyxia.online</strong></p>
+  <p class="status">Échantillon : ta voix (DianeMessage.mp3)</p>
+
+  <button id="btnTest" onclick="lancerTest()">▶ Lancer le test</button>
+
+  <div id="resultat"></div>
+
+  <script>
+    async function lancerTest() {
+      const btn = document.getElementById('btnTest');
+      const resDiv = document.getElementById('resultat');
+      btn.disabled = true;
+      btn.textContent = '⏳ Test en cours (ça peut prendre 10-20 secondes)...';
+      resDiv.innerHTML = '';
+
+      try {
+        const response = await fetch('https://aidants.lemiroirnyxia.online/api/test/voice-clone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio_url: 'https://d1yei2z3i6k35z.cloudfront.net/1872133/6a4d6713e8d380.70921629_DianeMessage.mp3',
+            confirm: 'diane-test'
+          })
+        });
+        const data = await response.json();
+
+        let html = '<h3>Résultat :</h3><pre>' + JSON.stringify(data.diagnostic, null, 2) + '</pre>';
+
+        if (data.succes && data.audio_base64) {
+          html += '<h3>✅ Ça a fonctionné ! Écoute ta voix clonée :</h3>';
+          html += '<audio controls src="data:audio/mpeg;base64,' + data.audio_base64 + '"></audio>';
+        } else if (data.erreur) {
+          html += '<h3 style="color:#ef4444">❌ Erreur : ' + data.erreur + '</h3>';
+        } else {
+          html += '<h3 style="color:#F4C842">⚠️ Le test s\'est arrêté à une étape — regarde le diagnostic ci-dessus.</h3>';
+        }
+
+        resDiv.innerHTML = html;
+      } catch (err) {
+        resDiv.innerHTML = '<h3 style="color:#ef4444">❌ Erreur de connexion : ' + err.message + '</h3>';
+      }
+
+      btn.disabled = false;
+      btn.textContent = '▶ Relancer le test';
+    }
+  </script>
+</body>
+</html>

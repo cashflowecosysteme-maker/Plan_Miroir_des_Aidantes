@@ -159,6 +159,9 @@
         <div class="nav-item" id="nav-cotherapeute" onclick="showPanel('cotherapeute')">
           <span class="nav-icon">🤝</span> Co-Thérapeute <span class="nav-arrow">›</span>
         </div>
+        <div class="nav-item" id="nav-generateur" onclick="showPanel('generateur')">
+          <span class="nav-icon">🪄</span> Générateur d'Exercices <span class="nav-arrow">›</span>
+        </div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
@@ -273,6 +276,13 @@
       <div class="panel" id="panel-cotherapeute" style="flex-direction:column">
         <div style="flex:1;overflow:hidden;position:relative">
           <iframe src="/co-therapeute.html" style="width:100%;height:100%;border:none;display:block" title="Co-Thérapeute"></iframe>
+        </div>
+      </div>
+
+      <!-- Panel Générateur d'Exercices — iframe -->
+      <div class="panel" id="panel-generateur" style="flex-direction:column">
+        <div style="flex:1;overflow:hidden;position:relative">
+          <iframe src="/generateur-exercices.html" style="width:100%;height:100%;border:none;display:block" title="Générateur d'Exercices"></iframe>
         </div>
       </div>
     </div>

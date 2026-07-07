@@ -789,9 +789,9 @@ async function handleTestVoiceClone(request, env, headers) {
     return jsonResponse({ error: 'audio_url manquant' }, headers, 400);
   }
 
-  const apiKey = env.AI_API_KEY;
+  const apiKey = env.MINIMAX_API_KEY;
   if (!apiKey) {
-    return jsonResponse({ error: 'AI_API_KEY non configurée dans les secrets Cloudflare' }, headers, 500);
+    return jsonResponse({ error: 'MINIMAX_API_KEY non configurée dans les secrets Cloudflare' }, headers, 500);
   }
 
   const diagnostic = { etape1_telechargement: null, etape2_upload: null, etape3_clonage: null, etape4_synthese: null };
@@ -806,12 +806,12 @@ async function handleTestVoiceClone(request, env, headers) {
     const audioBlob = await audioResp.blob();
     diagnostic.etape1_telechargement = { ok: true, taille_octets: audioBlob.size };
 
-    // Étape 2 — upload vers AI/ML API
+    // Étape 2 — upload vers MiniMax (API officielle)
     const uploadForm = new FormData();
     uploadForm.append('file', audioBlob, 'echantillon.mp3');
     uploadForm.append('purpose', 'voice_clone');
 
-    const uploadResp = await fetch('https://api.aimlapi.com/v1/files/upload', {
+    const uploadResp = await fetch('https://api.minimax.io/v1/files/upload', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}` },
       body: uploadForm,
@@ -832,7 +832,7 @@ async function handleTestVoiceClone(request, env, headers) {
     }
 
     // Étape 3 — cloner la voix
-    const cloneResp = await fetch('https://api.aimlapi.com/v1/voice_clone', {
+    const cloneResp = await fetch('https://api.minimax.io/v1/voice_clone', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -848,11 +848,11 @@ async function handleTestVoiceClone(request, env, headers) {
     if (!cloneResp.ok) return jsonResponse({ diagnostic }, headers);
 
     // Étape 4 — synthèse test avec la voix clonée
-    const ttsResp = await fetch('https://api.aimlapi.com/v1/tts', {
+    const ttsResp = await fetch('https://api.minimax.io/v1/t2a_v2', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'minimax/speech-2.6-hd',
+        model: 'speech-2.6-hd',
         text: 'Bonjour, je suis NyXia, et voici ma voix.',
         voice_setting: { voice_id: 'diane_boyer_nyxia_test' },
       }),
@@ -864,15 +864,34 @@ async function handleTestVoiceClone(request, env, headers) {
       return jsonResponse({ diagnostic }, headers);
     }
 
-    const ttsBlob = await ttsResp.arrayBuffer();
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(ttsBlob)));
-    diagnostic.etape4_synthese = { ok: true, taille_octets: ttsBlob.byteLength };
+    // L'API officielle MiniMax renvoie du JSON avec l'audio encodé en hex (pas du binaire brut)
+    const ttsRawText = await ttsResp.text();
+    let base64Audio = null;
+    let tailleAudio = 0;
+    try {
+      const ttsJson = JSON.parse(ttsRawText);
+      const hexAudio = ttsJson.data && ttsJson.data.audio;
+      if (hexAudio) {
+        const bytes = new Uint8Array(hexAudio.length / 2);
+        for (let i = 0; i < hexAudio.length; i += 2) bytes[i / 2] = parseInt(hexAudio.substr(i, 2), 16);
+        base64Audio = btoa(String.fromCharCode(...bytes));
+        tailleAudio = bytes.length;
+      } else {
+        diagnostic.etape4_synthese = { ok: false, reponse_brute: ttsRawText.slice(0, 800), erreur: 'Pas de champ data.audio trouvé' };
+        return jsonResponse({ diagnostic }, headers);
+      }
+    } catch (e) {
+      diagnostic.etape4_synthese = { ok: false, reponse_brute: ttsRawText.slice(0, 800), erreur: 'Réponse non-JSON, format inattendu' };
+      return jsonResponse({ diagnostic }, headers);
+    }
+
+    diagnostic.etape4_synthese = { ok: true, taille_octets: tailleAudio };
 
     return jsonResponse({
       diagnostic,
       succes: true,
       audio_base64: base64Audio,
-      message: 'Clonage réussi ! Colle "audio_base64" dans un décodeur base64 → mp3 pour écouter, ou demande à Claude de le faire pour toi.'
+      message: 'Clonage réussi ! Le lecteur audio de la page de test va jouer directement ta voix clonée.'
     }, headers);
 
   } catch (err) {

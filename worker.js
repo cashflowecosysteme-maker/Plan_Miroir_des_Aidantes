@@ -407,7 +407,13 @@ function filtrerExercices(exercices, message, history) {
 
 async function handleChat(request, env, headers) {
   const body = await request.json();
-  const { message, history, userName, agent, context } = body;
+  const { message, history, userName, agent, context, token } = body;
+
+  // ─── Garde d'accès : le chat exige une session valide ───
+  const sessionEmail = await getSessionEmail(token, env);
+  if (!sessionEmail) {
+    return jsonResponse({ error: 'Session invalide' }, headers, 401);
+  }
 
   const apiKey = env.OPENROUTER_API_KEY;
   if (!apiKey) {

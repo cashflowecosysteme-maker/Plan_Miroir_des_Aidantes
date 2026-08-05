@@ -399,9 +399,9 @@
       addTyping()
       fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: chatHistory.slice(-10), userName: clientName, agent: _currentAgent, attachment: attachmentToSend })
+        body: JSON.stringify({ token: sessionToken, message: text, history: chatHistory.slice(-10), userName: clientName, agent: _currentAgent, attachment: attachmentToSend })
       })
-      .then(r => r.json())
+      .then(r => { if (r.status === 401) { window.location.href = '/login.html'; throw new Error('unauth'); } return r.json() })
       .then(data => {
         removeTyping()
         var reply = data.content || 'Erreur inattendue — réessaie dans un instant 💜'

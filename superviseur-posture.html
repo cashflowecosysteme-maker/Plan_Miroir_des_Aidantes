@@ -402,11 +402,13 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        token: sessionToken,
                         message: text,
                         agent: 'superviseur' // IMPORTANT : Indique au worker d'appeler le prompt de supervision
                     })
                 });
 
+                if (response.status === 401) { window.location.href = '/login.html'; return; }
                 const data = await response.json();
                 const reply = data.content || "Le miroir reste silencieux. Vérifie la connexion avec ton Worker.";
                 loadingDiv.innerText = reply;

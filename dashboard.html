@@ -292,21 +292,8 @@
 
   <script>
     /* ═══════ CONFIG VOIX ═══════ */
-    var NYXIA_VOICE_PRIORITY = ['Microsoft Denise','Microsoft Hortense','Google français','Amélie','Audrey','Virginie','Sophie','Marie','Alice'];
-    var _cachedVoices = null;
-    function pickBestFrenchVoice(voices) {
-      if (!voices || !voices.length) voices = window.speechSynthesis.getVoices();
-      if (!voices || !voices.length) return _cachedVoices;
-      for (var i = 0; i < NYXIA_VOICE_PRIORITY.length; i++) {
-        var found = voices.find(function(v) { return v.name.indexOf(NYXIA_VOICE_PRIORITY[i]) !== -1 && v.lang.indexOf('fr') === 0 })
-        if (found) { _cachedVoices = found; console.log('🔊 Voix NyXia:', found.name); return found; }
-      }
-      var feminine = voices.find(function(v) { return v.lang === 'fr-FR' && /female|femme|amelie|audrey|marie|virginie|sophie|alice|denise|helene|isabelle|celine|julie|leila/i.test(v.name) })
-      if (feminine) { _cachedVoices = feminine; console.log('🔊 Voix fallback:', feminine.name); return feminine; }
-      var any = voices.find(function(v) { return v.lang === 'fr-FR' }) || voices.find(function(v) { return v.lang && v.lang.indexOf('fr') === 0 }) || null;
-      if (any) { _cachedVoices = any; console.log('🔊 Voix générique:', any.name); }
-      return any;
-    }
+    /* La voix de NyXia vient EXCLUSIVEMENT d'ElevenLabs (identité vocale unique sur tous les portails). */
+    /* Aucune voix du navigateur : voir la section VOIX plus bas (appel serveur POST /api/tts). */
 
     /* ═══════ AUTH ═══════ */
     var sessionToken = sessionStorage.getItem('nyxia_token') || ''
@@ -535,22 +522,106 @@
 
     function removeTyping() { var t = document.getElementById('typing-indicator'); if (t) t.remove() }
 
-    /* ═══════ TTS ═══════ */
-    function speakMsg(btn, text) {
-      if (!window.speechSynthesis) return
-      if (btn._nxSpeaking) {
-        window.speechSynthesis.cancel(); btn._nxSpeaking = false; btn.textContent = '🔊 Écouter'; btn.style.borderColor = 'rgba(123,92,255,0.15)'; btn.style.color = 'var(--t4)'; btn.style.background = 'rgba(123,92,255,0.04)'; return
+    /* ═══════ VOIX NyXia — ElevenLabs (identité vocale unique sur tous les portails) ═══════ */
+    /* voice_id + clé gérés côté serveur (secrets Cloudflare). Endpoint : POST /api/tts → audio MP3 brut. */
+    /* RÈGLE : jamais de repli silencieux sur la voix du navigateur. En cas d'échec, l'erreur exacte */
+    /*         d'ElevenLabs (code + message) est affichée et journalisée dans la console.             */
+    var _nxAudio = null;      // objet Audio en cours de lecture
+    var _nxAudioBtn = null;   // bouton actuellement actif
+    var _nxAudioUrl = null;   // objectURL du blob à révoquer
+
+    function _nxResetBtn(btn) {
+      if (!btn) return;
+      btn._nxSpeaking = false;
+      if (btn.classList && btn.classList.contains('btn-speak')) {
+        btn.textContent = btn.dataset.idleLabel || '🔊 Message de Diane';
+        btn.classList.remove('speaking');
+      } else {
+        btn.textContent = '🔊 Écouter';
+        btn.style.borderColor = 'rgba(123,92,255,0.15)';
+        btn.style.color = 'var(--t4)';
+        btn.style.background = 'rgba(123,92,255,0.04)';
       }
-      window.speechSynthesis.cancel()
-      document.querySelectorAll('.msg button').forEach(function(b) { if (b._nxSpeaking) { b._nxSpeaking = false; b.textContent = '🔊 Écouter'; b.style.borderColor = 'rgba(123,92,255,0.15)'; b.style.color = 'var(--t4)'; b.style.background = 'rgba(123,92,255,0.04)' } })
-      var clean = cleanForSpeech(text)
-      if (!clean) return
-      btn._nxSpeaking = true; btn.textContent = '⏹ Arrêter'; btn.style.borderColor = 'rgba(0,230,118,0.4)'; btn.style.color = '#00E676'; btn.style.background = 'rgba(0,230,118,0.08)'
-      var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
-      function doSpeak() { var voice = pickBestFrenchVoice(window.speechSynthesis.getVoices()); if (voice) utt.voice = voice; window.speechSynthesis.speak(utt) }
-      utt.onend = utt.onerror = function() { btn._nxSpeaking = false; btn.textContent = '🔊 Écouter'; btn.style.borderColor = 'rgba(123,92,255,0.15)'; btn.style.color = 'var(--t4)'; btn.style.background = 'rgba(123,92,255,0.04)' }
-      setTimeout(doSpeak, 200)
     }
+
+    function _nxStop() {
+      if (_nxAudio) { try { _nxAudio.pause(); } catch (e) {} _nxAudio.src = ''; _nxAudio = null; }
+      if (_nxAudioUrl) { try { URL.revokeObjectURL(_nxAudioUrl); } catch (e) {} _nxAudioUrl = null; }
+      if (_nxAudioBtn) { _nxResetBtn(_nxAudioBtn); _nxAudioBtn = null; }
+    }
+
+    /* Toast d'erreur voix — NyXia ne bascule jamais en douce sur une autre voix. */
+    function showVoiceError(msg) {
+      var t = document.getElementById('nx-voice-toast');
+      if (!t) {
+        t = document.createElement('div'); t.id = 'nx-voice-toast';
+        t.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:99999;max-width:90%;background:rgba(20,8,40,0.96);border:1px solid rgba(255,90,90,0.5);color:#ffd9d9;font-family:Outfit,sans-serif;font-size:13px;line-height:1.5;padding:12px 16px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);backdrop-filter:blur(8px);cursor:pointer';
+        t.addEventListener('click', function () { t.style.display = 'none'; });
+        document.body.appendChild(t);
+      }
+      t.innerHTML = '🔇 <strong>Voix NyXia momentanément indisponible.</strong><br><span style="opacity:.8;font-size:11px">' + (msg || '') + '</span>';
+      t.style.display = 'block';
+      clearTimeout(t._to); t._to = setTimeout(function () { t.style.display = 'none'; }, 9000);
+    }
+
+    /* Cœur : récupère l'audio ElevenLabs via le serveur et le joue. */
+    function nyxiaSpeak(text, btn, opts) {
+      opts = opts || {};
+      var clean = cleanForSpeech(text);
+      if (!clean) return;
+
+      // Toggle : si CE bouton joue déjà, on arrête.
+      if (btn && btn._nxSpeaking) { _nxStop(); return; }
+      _nxStop(); // coupe toute lecture en cours
+
+      _nxAudioBtn = btn || null;
+      if (btn) {
+        btn._nxSpeaking = true;
+        if (btn.classList && btn.classList.contains('btn-speak')) {
+          if (!btn.dataset.idleLabel) btn.dataset.idleLabel = btn.textContent;
+          btn.textContent = '⏳ NyXia parle...';
+          btn.classList.add('speaking');
+        } else {
+          btn.textContent = '⏹ Arrêter';
+          btn.style.borderColor = 'rgba(0,230,118,0.4)';
+          btn.style.color = '#00E676';
+          btn.style.background = 'rgba(0,230,118,0.08)';
+        }
+      }
+
+      fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: clean })
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          // Récupérer le message d'erreur EXACT d'ElevenLabs — pas de fallback silencieux.
+          return res.text().then(function (raw) {
+            var msg = raw;
+            try { var j = JSON.parse(raw); msg = (j.error || '') + (j.detail ? ' — ' + j.detail : ''); } catch (e) {}
+            throw new Error('ElevenLabs ' + res.status + ' : ' + (msg || 'erreur inconnue'));
+          });
+        }
+        return res.blob();
+      })
+      .then(function (blob) {
+        _nxAudioUrl = URL.createObjectURL(blob);
+        _nxAudio = new Audio(_nxAudioUrl);
+        _nxAudio.onended = function () { _nxStop(); if (opts.onend) opts.onend(); };
+        _nxAudio.onerror = function () { _nxStop(); if (opts.onend) opts.onend(); };
+        return _nxAudio.play();
+      })
+      .catch(function (err) {
+        _nxStop();
+        console.error('❌ Voix NyXia (ElevenLabs) :', err.message);
+        showVoiceError(err.message);   // on MONTRE l'erreur, on ne bascule PAS sur une voix générique
+        if (opts.onend) opts.onend();
+      });
+    }
+
+    /* ═══════ TTS ═══════ */
+    function speakMsg(btn, text) { nyxiaSpeak(text, btn); }
 
     var _msgDiane = null;
     function jouerMessageDiane() {
@@ -567,25 +638,9 @@
       _msgDiane.onerror  = function() { btn.textContent = '🔊 Message de Diane'; btn.classList.remove('speaking'); };
     }
 
+    /* Lecture auto de la réponse quand le mode « voix » est activé. */
     function speakText(text) {
-      if (!window.speechSynthesis) return; window.speechSynthesis.cancel()
-      var clean = cleanForSpeech(text)
-      if (!clean) return
-      var utt = new SpeechSynthesisUtterance(clean); utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 1.1; utt.volume = 1
-      function trySpeak() { var voice = pickBestFrenchVoice(window.speechSynthesis.getVoices()); if (voice) utt.voice = voice; window.speechSynthesis.speak(utt) }
-      utt.onend = function() { var btn = document.getElementById('btn-speak'); if (btn) { btn.textContent = '🔊 Écouter NyXia'; btn.classList.remove('speaking') } isSpeaking = false }
-      utt.onerror = function() { isSpeaking = false }
-      setTimeout(trySpeak, 200)
-    }
-
-    if (window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = function() {
-        var voices = window.speechSynthesis.getVoices()
-        pickBestFrenchVoice(voices)
-        var frVoices = voices.filter(function(v) { return v.lang && v.lang.indexOf('fr') === 0 })
-        console.log('🔊 Voix FR disponibles:', frVoices.map(function(v) { return v.name }).join(', '))
-      }
-      pickBestFrenchVoice(window.speechSynthesis.getVoices())
+      nyxiaSpeak(text, null, { onend: function () { isSpeaking = false; } });
     }
 
     /* ═══════ FILE UPLOAD ═══════ */

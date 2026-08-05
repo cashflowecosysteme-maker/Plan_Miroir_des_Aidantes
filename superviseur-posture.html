@@ -310,6 +310,16 @@
     </div>
 
     <script>
+
+        // ═══ Garde d'accès — page réservée aux clientes connectées ═══
+        var sessionToken = sessionStorage.getItem('nyxia_token') || '';
+        ;(function checkAuth() {
+            if (!sessionToken) { window.location.href = '/login.html'; return; }
+            fetch('/api/check-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: sessionToken }) })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { if (!data || !data.valid) { window.location.href = '/login.html'; } })
+                .catch(function () { window.location.href = '/login.html'; });
+        })();
         // Génération des étoiles de fond
         const starsContainer = document.getElementById('starsContainer');
         for (let i = 0; i < 60; i++) {

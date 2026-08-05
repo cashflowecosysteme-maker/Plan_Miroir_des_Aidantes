@@ -233,6 +233,7 @@
             padding: 16px;
             border-top: 1px solid var(--border);
             display: flex;
+            align-items: flex-end;
             gap: 12px;
             background: rgba(3, 5, 15, 0.4);
             border-bottom-left-radius: 16px;
@@ -246,8 +247,11 @@
             padding: 12px;
             color: var(--text);
             font-family: inherit;
-            resize: none;
-            height: 24px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 90px;
+            max-height: 280px;
             outline: none;
             transition: border-color 0.2s;
         }
@@ -258,6 +262,7 @@
             border: 1px solid var(--p-purple);
             color: var(--p-purple);
             width: 50px;
+            height: 46px;
             border-radius: 8px;
             cursor: pointer;
             display: flex;
@@ -273,6 +278,7 @@
             border: 1px solid var(--p-purple);
             color: var(--p-purple);
             width: 50px;
+            height: 46px;
             border-radius: 8px;
             cursor: pointer;
             display: flex;

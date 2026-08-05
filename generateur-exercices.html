@@ -418,6 +418,15 @@
 
         const sessionToken = sessionStorage.getItem('nyxia_token') || '';
 
+        // ═══ Garde d'accès — page réservée aux clientes connectées ═══
+        ;(function checkAuth() {
+            if (!sessionToken) { window.location.href = '/login.html'; return; }
+            fetch('/api/check-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: sessionToken }) })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { if (!data || !data.valid) { window.location.href = '/login.html'; } })
+                .catch(function () { window.location.href = '/login.html'; });
+        })();
+
         const objectifLabels = {
             ancrage: '🌳 Ancrage',
             liberation: '💧 Libération émotionnelle',
@@ -467,11 +476,13 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        token: sessionToken,
                         message: 'Génère un protocole d\'exercice pour cet objectif.',
                         agent: 'generateur',
                         context: contextMsg
                     })
                 });
+                if (response.status === 401) { window.location.href = '/login.html'; return; }
                 const data = await response.json();
                 const reply = data.content || "L'alchimie est restée silencieuse. Vérifie la connexion avec ton Worker.";
                 dernierProtocole = reply;

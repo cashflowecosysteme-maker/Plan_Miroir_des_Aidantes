@@ -499,8 +499,10 @@
             agentDiv.appendChild(bar);
         }
 
-        /* ═══════ SAISIE VOCALE — parler à NyXia (reconnaissance native fr-FR, envoi direct) ═══════ */
-        var _rec = null, _recFinal = '', _recCancelled = false;
+        /* ═══════ SAISIE VOCALE — parler à NyXia (dictée continue : envoi après un silence ou en retapant le micro) ═══════ */
+        var _rec = null, _recFinal = '', _recStopping = false, _silenceTimer = null;
+        var SILENCE_MS = 4000; // délai de silence avant envoi auto — la cliente peut faire des pauses sans être coupée
+        function _clearSilence() { if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; } }
         function nxInfoToast(msg) {
             var t = document.getElementById('nx-info-toast');
             if (!t) {
@@ -523,47 +525,45 @@
                 });
                 return;
             }
+            var input = document.getElementById('userInput');
+            function stopAndSend() { _recStopping = true; _clearSilence(); if (_rec) { try { _rec.stop(); } catch (e) {} } }
             micBtn.addEventListener('click', function () {
-                if (_rec) { _recCancelled = true; try { _rec.stop(); } catch (e) {} return; }
-                var input = document.getElementById('userInput');
+                if (_rec) { stopAndSend(); return; } // retaper le micro pendant l'écoute = terminer et envoyer
                 _rec = new SR();
                 _rec.lang = 'fr-FR';
-                _rec.continuous = false;
+                _rec.continuous = true;
                 _rec.interimResults = true;
                 _rec.maxAlternatives = 1;
                 _recFinal = '';
-                _recCancelled = false;
+                _recStopping = false;
                 micBtn.classList.add('recording');
                 micBtn.textContent = '⏹';
                 _rec.onresult = function (ev) {
                     var interim = '';
                     for (var i = ev.resultIndex; i < ev.results.length; i++) {
                         var tr = ev.results[i][0].transcript;
-                        if (ev.results[i].isFinal) _recFinal += tr; else interim += tr;
+                        if (ev.results[i].isFinal) _recFinal += tr + ' '; else interim += tr;
                     }
-                    input.value = (_recFinal + ' ' + interim).trim();
+                    input.value = (_recFinal + interim).trim();
+                    _clearSilence();
+                    _silenceTimer = setTimeout(stopAndSend, SILENCE_MS);
                 };
                 _rec.onerror = function (ev) {
                     if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
-                        _recCancelled = true;
+                        _recStopping = true; _clearSilence();
                         nxInfoToast("NyXia a besoin de l'autorisation du micro. Vérifie les réglages de ton navigateur 💜");
                     } else if (ev.error === 'no-speech') {
-                        _recCancelled = true;
+                        _recStopping = true;
                         nxInfoToast("Je n'ai rien entendu. Réessaie quand tu es prête 💜");
-                    } else if (ev.error !== 'aborted') {
-                        _recCancelled = true;
                     }
                 };
                 _rec.onend = function () {
+                    _clearSilence();
                     micBtn.classList.remove('recording');
                     micBtn.textContent = '🎤';
                     var finalText = (_recFinal || '').trim();
-                    var cancelled = _recCancelled;
-                    _rec = null; _recFinal = '';
-                    if (!cancelled && finalText) {
-                        input.value = '';
-                        executeMessageSend(finalText);
-                    }
+                    _rec = null; _recStopping = false; _recFinal = '';
+                    if (finalText) { input.value = ''; executeMessageSend(finalText); }
                 };
                 try { _rec.start(); } catch (e) {
                     micBtn.classList.remove('recording'); micBtn.textContent = '🎤'; _rec = null;

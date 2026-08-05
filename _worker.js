@@ -280,6 +280,11 @@ export default {
         return handleChat(request, env, corsHeaders);
       }
 
+      // ═══ VOIX NyXia — ElevenLabs (identité vocale unifiée sur tous les portails) ═══
+      if (path === '/api/tts' && request.method === 'POST') {
+        return handleTTS(request, env, corsHeaders);
+      }
+
       // ═══ JOURNAL CLINIQUE (Co-Thérapeute) ═══
       if (path === '/api/journal/save' && request.method === 'POST') {
         return handleJournalSave(request, env, corsHeaders);
@@ -1003,6 +1008,76 @@ async function saveClients(env, clients) {
 }
 
 // FIX : jsonResponse correctement séparé status des headers CORS
+// ============================================================
+//  VOIX NyXia — ElevenLabs (voix UNIQUE sur tous les portails)
+// ------------------------------------------------------------
+//  Secrets Cloudflare requis :
+//    ELEVENLABS_API_KEY            (clé compte ElevenLabs)
+//    ELEVENLABS_NYXIA_VOICE_ID     (= 4RsGOijU4NDnmihod21E)
+//  Règles NON négociables :
+//    • Header  xi-api-key  — JAMAIS Authorization: Bearer
+//    • model_id = eleven_multilingual_v2 (langue fr-FR)
+//    • La réponse ElevenLabs est de l'AUDIO BRUT → arrayBuffer,
+//      jamais du JSON. On la stream telle quelle au navigateur.
+//    • En cas d'échec : on renvoie le code + le message EXACT
+//      d'ElevenLabs. Aucun repli silencieux sur une autre voix.
+// ============================================================
+async function handleTTS(request, env, headers) {
+  let body;
+  try { body = await request.json(); } catch (e) { return jsonResponse({ error: 'Requête invalide' }, headers, 400); }
+
+  const text = (body && body.text ? String(body.text) : '').trim();
+  if (!text) return jsonResponse({ error: 'Texte vide' }, headers, 400);
+
+  const apiKey  = env.ELEVENLABS_API_KEY;
+  const voiceId = env.ELEVENLABS_NYXIA_VOICE_ID || '4RsGOijU4NDnmihod21E';
+
+  if (!apiKey) {
+    return jsonResponse({ error: 'Configuration voix manquante : le secret ELEVENLABS_API_KEY n\'est pas défini sur Cloudflare.' }, headers, 500);
+  }
+
+  let elevenRes;
+  try {
+    elevenRes = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey,           // ⚠️ surtout PAS "Authorization: Bearer"
+        'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
+    });
+  } catch (e) {
+    return jsonResponse({ error: 'Impossible de joindre ElevenLabs', detail: String(e && e.message || e) }, headers, 502);
+  }
+
+  // Échec API : on remonte le code + message EXACT reçu d'ElevenLabs.
+  if (!elevenRes.ok) {
+    let detail = '';
+    try { detail = await elevenRes.text(); } catch (e) {}
+    return jsonResponse({
+      error: 'ElevenLabs ' + elevenRes.status,
+      status: elevenRes.status,
+      detail: detail,
+    }, headers, elevenRes.status);
+  }
+
+  // Succès : audio brut → on le renvoie tel quel (surtout pas de .json()).
+  const audio = await elevenRes.arrayBuffer();
+  return new Response(audio, {
+    status: 200,
+    headers: {
+      'Content-Type': 'audio/mpeg',
+      'Cache-Control': 'no-store',
+      ...headers,
+    },
+  });
+}
+
 function jsonResponse(data, corsHeaders = {}, status = 200) {
   return new Response(JSON.stringify(data), {
     status: status,

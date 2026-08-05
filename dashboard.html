@@ -127,7 +127,7 @@
 <body>
 
   <canvas id="starry-canvas"></canvas>
-  <audio id="nyxia-audio" src="/NyXia-MessageAccueilPraticiennes.mp3" preload="auto"></audio>
+  <audio id="nyxia-audio" src="/NyXia-MessageAccueil-Praticiennes.mp3" preload="auto"></audio>
 
   <header>
     <div class="header-brand">
@@ -699,78 +699,78 @@
     }
     function escHtml(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML }
 
-    /* ═══════ SAISIE VOCALE — parler à NyXia (reconnaissance native fr-FR, envoi direct) ═══════ */
-    var _rec = null, _recFinal = '', _recCancelled = false;
-    function nxInfoToast(msg) {
-      var t = document.getElementById('nx-info-toast');
-      if (!t) {
-        t = document.createElement('div'); t.id = 'nx-info-toast';
-        t.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:99999;max-width:90%;background:rgba(20,8,40,0.96);border:1px solid rgba(123,92,255,0.5);color:#e9deff;font-family:inherit;font-size:13px;line-height:1.5;padding:12px 16px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);cursor:pointer';
-        t.addEventListener('click', function () { t.style.display = 'none'; });
-        document.body.appendChild(t);
-      }
-      t.textContent = msg;
-      t.style.display = 'block';
-      clearTimeout(t._to); t._to = setTimeout(function () { t.style.display = 'none'; }, 7000);
-    }
-    function initVoiceInput() {
-      var micBtn = document.getElementById('btnMic');
-      if (!micBtn) return;
-      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) {
-        micBtn.addEventListener('click', function () {
-          nxInfoToast("La saisie vocale n'est pas disponible sur ce navigateur. Tu peux écrire ton message, NyXia t'écoute autant 💜");
-        });
-        return;
-      }
-      micBtn.addEventListener('click', function () {
-        if (_rec) { _recCancelled = true; try { _rec.stop(); } catch (e) {} return; }
-        var input = document.getElementById('chat-input');
-        _rec = new SR();
-        _rec.lang = 'fr-FR';
-        _rec.continuous = false;
-        _rec.interimResults = true;
-        _rec.maxAlternatives = 1;
-        _recFinal = '';
-        _recCancelled = false;
-        micBtn.classList.add('recording');
-        micBtn.textContent = '⏹';
-        _rec.onresult = function (ev) {
-          var interim = '';
-          for (var i = ev.resultIndex; i < ev.results.length; i++) {
-            var tr = ev.results[i][0].transcript;
-            if (ev.results[i].isFinal) _recFinal += tr; else interim += tr;
-          }
-          input.value = (_recFinal + ' ' + interim).trim();
-        };
-        _rec.onerror = function (ev) {
-          if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
-            _recCancelled = true;
-            nxInfoToast("NyXia a besoin de l'autorisation du micro. Vérifie les réglages de ton navigateur 💜");
-          } else if (ev.error === 'no-speech') {
-            _recCancelled = true;
-            nxInfoToast("Je n'ai rien entendu. Réessaie quand tu es prête 💜");
-          } else if (ev.error !== 'aborted') {
-            _recCancelled = true;
-          }
-        };
-        _rec.onend = function () {
-          micBtn.classList.remove('recording');
-          micBtn.textContent = '🎤';
-          var finalText = (_recFinal || '').trim();
-          var cancelled = _recCancelled;
-          _rec = null; _recFinal = '';
-          if (!cancelled && finalText) {
-            input.value = finalText;
-            sendMessage();
-          }
-        };
-        try { _rec.start(); } catch (e) {
-          micBtn.classList.remove('recording'); micBtn.textContent = '🎤'; _rec = null;
+    /* ═══════ SAISIE VOCALE — parler à NyXia (dictée continue : envoi après un silence ou en retapant le micro) ═══════ */
+        var _rec = null, _recFinal = '', _recStopping = false, _silenceTimer = null;
+        var SILENCE_MS = 4000; // délai de silence avant envoi auto — la cliente peut faire des pauses sans être coupée
+        function _clearSilence() { if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; } }
+        function nxInfoToast(msg) {
+            var t = document.getElementById('nx-info-toast');
+            if (!t) {
+                t = document.createElement('div'); t.id = 'nx-info-toast';
+                t.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:99999;max-width:90%;background:rgba(20,8,40,0.96);border:1px solid rgba(123,92,255,0.5);color:#e9deff;font-family:inherit;font-size:13px;line-height:1.5;padding:12px 16px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);cursor:pointer';
+                t.addEventListener('click', function () { t.style.display = 'none'; });
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.style.display = 'block';
+            clearTimeout(t._to); t._to = setTimeout(function () { t.style.display = 'none'; }, 7000);
         }
-      });
-    }
-    initVoiceInput();
+        function initVoiceInput() {
+            var micBtn = document.getElementById('btnMic');
+            if (!micBtn) return;
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) {
+                micBtn.addEventListener('click', function () {
+                    nxInfoToast("La saisie vocale n'est pas disponible sur ce navigateur. Tu peux écrire ton message, NyXia t'écoute autant 💜");
+                });
+                return;
+            }
+            var input = document.getElementById('chat-input');
+            function stopAndSend() { _recStopping = true; _clearSilence(); if (_rec) { try { _rec.stop(); } catch (e) {} } }
+            micBtn.addEventListener('click', function () {
+                if (_rec) { stopAndSend(); return; } // retaper le micro pendant l'écoute = terminer et envoyer
+                _rec = new SR();
+                _rec.lang = 'fr-FR';
+                _rec.continuous = true;
+                _rec.interimResults = true;
+                _rec.maxAlternatives = 1;
+                _recFinal = '';
+                _recStopping = false;
+                micBtn.classList.add('recording');
+                micBtn.textContent = '⏹';
+                _rec.onresult = function (ev) {
+                    var interim = '';
+                    for (var i = ev.resultIndex; i < ev.results.length; i++) {
+                        var tr = ev.results[i][0].transcript;
+                        if (ev.results[i].isFinal) _recFinal += tr + ' '; else interim += tr;
+                    }
+                    input.value = (_recFinal + interim).trim();
+                    _clearSilence();
+                    _silenceTimer = setTimeout(stopAndSend, SILENCE_MS);
+                };
+                _rec.onerror = function (ev) {
+                    if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+                        _recStopping = true; _clearSilence();
+                        nxInfoToast("NyXia a besoin de l'autorisation du micro. Vérifie les réglages de ton navigateur 💜");
+                    } else if (ev.error === 'no-speech') {
+                        _recStopping = true;
+                        nxInfoToast("Je n'ai rien entendu. Réessaie quand tu es prête 💜");
+                    }
+                };
+                _rec.onend = function () {
+                    _clearSilence();
+                    micBtn.classList.remove('recording');
+                    micBtn.textContent = '🎤';
+                    var finalText = (_recFinal || '').trim();
+                    _rec = null; _recStopping = false; _recFinal = '';
+                    if (finalText) { input.value = finalText; sendMessage(); }
+                };
+                try { _rec.start(); } catch (e) {
+                    micBtn.classList.remove('recording'); micBtn.textContent = '🎤'; _rec = null;
+                }
+            });
+        }
+        initVoiceInput();
   </script>
 </body>
 </html>

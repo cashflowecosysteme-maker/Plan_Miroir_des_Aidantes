@@ -287,6 +287,32 @@
             text-align: center;
             padding: 20px 10px;
         }
+        /* Cartes sauvegardées : cliquables + dépliables */
+        .saved-panel.open .saved-list { max-height: 2400px; }
+        .saved-count { color: var(--text-dim); font-size: 0.8rem; font-weight: 400; margin-left: 6px; }
+        .se-head {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; cursor: pointer;
+        }
+        .se-caret { color: var(--text-dim); font-size: 0.75rem; transition: transform 0.25s ease; }
+        .saved-entry.open .se-caret { transform: rotate(180deg); }
+        .se-preview { margin-top: 6px; color: var(--text); opacity: 0.9; }
+        .saved-entry.open .se-preview { display: none; }
+        .se-full { display: none; margin-top: 10px; }
+        .saved-entry.open .se-full { display: block; }
+        .se-content {
+            white-space: pre-wrap; line-height: 1.55; color: var(--text);
+            background: rgba(255,255,255,0.02); border-radius: 8px; padding: 12px 14px;
+        }
+        .se-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .btn-mini {
+            background: rgba(123,92,255,0.08); border: 1px solid rgba(123,92,255,0.25);
+            color: var(--text); font-family: inherit; font-size: 0.75rem;
+            padding: 7px 14px; border-radius: 50px; cursor: pointer; transition: all 0.15s;
+        }
+        .btn-mini:hover { border-color: var(--p-purple); }
+        .btn-mini.btn-danger { background: rgba(255,90,90,0.08); border-color: rgba(255,90,90,0.3); color: #ffb3b3; }
+        .btn-mini.btn-danger:hover { border-color: #ff5a5a; }
 
         .toast {
             position: fixed;
@@ -363,9 +389,9 @@
         </div>
 
         <!-- Protocoles sauvegardés -->
-        <div class="saved-panel" id="savedPanel">
+        <div class="saved-panel open" id="savedPanel">
             <div class="saved-header" onclick="toggleSaved()">
-                <h2>🗂️ Mes outils sauvegardés</h2>
+                <h2>🗂️ Mes outils sauvegardés<span class="saved-count" id="savedCount"></span></h2>
                 <span class="saved-toggle-icon">▾</span>
             </div>
             <div class="saved-list" id="savedList">
@@ -471,8 +497,7 @@
             });
         }
 
-        function genererPDF() {
-            if (!dernierProtocole) return;
+        function _buildProtocolePDF(objLabelRaw, contenu, fileBase) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
@@ -485,7 +510,7 @@
 
             doc.setTextColor(148, 163, 184);
             doc.setFontSize(10);
-            const objTxt = objectifSelectionne ? objectifLabels[objectifSelectionne].replace(/[^\x00-\x7F]/g, '').trim() : '';
+            const objTxt = (objLabelRaw || '').replace(/[^\x00-\x7F]/g, '').trim();
             doc.text('Objectif : ' + objTxt, 20, 33);
 
             doc.setDrawColor(123, 92, 255);
@@ -493,7 +518,7 @@
 
             doc.setTextColor(226, 232, 240);
             doc.setFontSize(11);
-            const texteNettoye = dernierProtocole.replace(/[✦💜🚀💎🌐📱⭐✓►▶🪄🌙🌳💧🧠🕯️]/g, '');
+            const texteNettoye = (contenu || '').replace(/[✦💜🚀💎🌐📱⭐✓►▶🪄🌙🌳💧🧠🕯️]/g, '');
             const lignes = doc.splitTextToSize(texteNettoye, 170);
             doc.text(lignes, 20, 48);
 
@@ -501,8 +526,14 @@
             doc.setFontSize(8);
             doc.text('© NyXia IA — Créée par Diane Boyer', 20, 285);
 
-            doc.save('NyXia-Exercice-' + (objectifSelectionne || 'protocole') + '.pdf');
+            doc.save('NyXia-Exercice-' + (fileBase || 'protocole') + '.pdf');
             showToast('📄 Fiche PDF téléchargée');
+        }
+
+        function genererPDF() {
+            if (!dernierProtocole) return;
+            const objLabel = objectifSelectionne ? objectifLabels[objectifSelectionne] : '';
+            _buildProtocolePDF(objLabel, dernierProtocole, objectifSelectionne || 'protocole');
         }
 
         async function sauvegarderProtocole() {
@@ -544,10 +575,18 @@
             return d.toLocaleDateString('fr-CA', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
         }
 
+        let savedEntries = [];
+
+        function escHtmlEx(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         async function loadSavedProtocoles() {
             const listEl = document.getElementById('savedList');
+            const countEl = document.getElementById('savedCount');
             if (!sessionToken) {
                 listEl.innerHTML = '<div class="saved-empty">Session requise pour afficher tes outils.</div>';
+                if (countEl) countEl.textContent = '';
                 return;
             }
             try {
@@ -557,19 +596,79 @@
                     body: JSON.stringify({ token: sessionToken })
                 });
                 const data = await response.json();
-                const entries = (data && data.entries) || [];
-                if (!entries.length) {
+                savedEntries = (data && data.entries) || [];
+                if (countEl) countEl.textContent = savedEntries.length ? ' (' + savedEntries.length + ')' : '';
+                if (!savedEntries.length) {
                     listEl.innerHTML = '<div class="saved-empty">Aucun protocole sauvegardé pour l\'instant.</div>';
                     return;
                 }
-                listEl.innerHTML = entries.map(e =>
-                    '<div class="saved-entry">' +
-                        '<div class="se-meta">' + formatDate(e.date) + (e.objectif ? ' · ' + e.objectif : '') + '</div>' +
-                        '<div>' + e.contenu.replace(/</g, '&lt;').slice(0, 160) + (e.contenu.length > 160 ? '…' : '') + '</div>' +
-                    '</div>'
-                ).join('');
+                listEl.innerHTML = savedEntries.map(function (e) {
+                    const meta = escHtmlEx(formatDate(e.date) + (e.objectif ? ' · ' + e.objectif : ''));
+                    const preview = escHtmlEx(e.contenu.slice(0, 160)) + (e.contenu.length > 160 ? '…' : '');
+                    const full = escHtmlEx(e.contenu).replace(/\n/g, '<br>');
+                    return '<div class="saved-entry" id="se-' + e.id + '">' +
+                            '<div class="se-head" onclick="toggleExercice(\'' + e.id + '\')">' +
+                                '<div class="se-meta">' + meta + '</div>' +
+                                '<span class="se-caret">▾</span>' +
+                            '</div>' +
+                            '<div class="se-preview">' + preview + '</div>' +
+                            '<div class="se-full">' +
+                                '<div class="se-content">' + full + '</div>' +
+                                '<div class="se-actions">' +
+                                    '<button class="btn-mini" onclick="copierExerciceSauvegarde(\'' + e.id + '\')">📋 Copier</button>' +
+                                    '<button class="btn-mini" onclick="pdfExerciceSauvegarde(\'' + e.id + '\')">⬇ PDF</button>' +
+                                    '<button class="btn-mini btn-danger" onclick="supprimerExerciceSauvegarde(\'' + e.id + '\')">🗑️ Supprimer</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                }).join('');
             } catch (error) {
                 listEl.innerHTML = '<div class="saved-empty">Impossible de charger tes outils.</div>';
+            }
+        }
+
+        // Déroule / replie un exercice pour le consulter en entier
+        function toggleExercice(id) {
+            const card = document.getElementById('se-' + id);
+            if (card) card.classList.toggle('open');
+        }
+
+        function copierExerciceSauvegarde(id) {
+            const e = savedEntries.find(function (x) { return x.id === id; });
+            if (!e) return;
+            navigator.clipboard.writeText(e.contenu).then(function () {
+                showToast('📋 Protocole copié dans le presse-papier');
+            }).catch(function () {
+                showToast('Impossible de copier automatiquement.');
+            });
+        }
+
+        function pdfExerciceSauvegarde(id) {
+            const e = savedEntries.find(function (x) { return x.id === id; });
+            if (!e) return;
+            const base = (e.objectif || 'protocole').replace(/[^\x00-\x7F]/g, '').trim().replace(/\s+/g, '-') || 'protocole';
+            _buildProtocolePDF(e.objectif || '', e.contenu, base);
+        }
+
+        async function supprimerExerciceSauvegarde(id) {
+            const e = savedEntries.find(function (x) { return x.id === id; });
+            if (!e) return;
+            if (!confirm('Supprimer définitivement cet exercice de tes outils ?')) return;
+            try {
+                const response = await fetch('/api/exercices/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: sessionToken, id: id })
+                });
+                const data = await response.json();
+                if (data && data.success) {
+                    showToast('🗑️ Exercice supprimé');
+                    loadSavedProtocoles();
+                } else {
+                    showToast('Impossible de supprimer pour le moment.');
+                }
+            } catch (error) {
+                showToast('Erreur de connexion.');
             }
         }
 
